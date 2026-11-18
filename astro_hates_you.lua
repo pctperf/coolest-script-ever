@@ -2226,6 +2226,15 @@ local function applyItemESP(obj)
 
         local mLower = monsterNameRaw:lower()
 
+        -- same rarity colors the Twisted ESP uses, for Twisteds with no special fade
+        local capsuleCommon = {["boxten"]=true, ["poppy"]=true, ["brusha"]=true, ["shrimpo"]=true, ["yatta"]=true, ["tisha"]=true, ["looey"]=true, ["cosmo"]=true}
+        local capsuleUncommon = {["finn"]=true, ["teagan"]=true, ["rodger"]=true, ["razzledazzle"]=true, ["connie"]=true, ["brightney"]=true, ["toodles"]=true}
+        local capsuleRare = {["gigi"]=true, ["scraps"]=true, ["goob"]=true, ["waxwell"]=true, ["glisten"]=true, ["flutter"]=true, ["squirm"]=true, ["blott"]=true}
+        local capsuleBase = nil
+        if capsuleCommon[mLower] then capsuleBase = Color3.fromRGB(180, 180, 180)
+        elseif capsuleUncommon[mLower] then capsuleBase = Color3.fromRGB(50, 255, 50)
+        elseif capsuleRare[mLower] then capsuleBase = Color3.fromRGB(100, 200, 255) end
+
         local colorsSet = {
             Color3.fromRGB(30,144,255), Color3.fromRGB(65,105,225), Color3.fromRGB(135,206,250),
             Color3.fromRGB(148,0,211), Color3.fromRGB(138,43,226), Color3.fromRGB(186,85,211),
@@ -2237,7 +2246,7 @@ local function applyItemESP(obj)
             while itemEspEnabled and obj and obj.Parent and hi and txt do
                 local t = tick()
                 if capsuleList1[mLower] then
-                    local alpha = (t - rbStart) / 0.5
+                    local alpha = (t - rbStart) / 1.0
                     if alpha >= 1 then
                         rbFrom = rbTo
                         repeat rbTo = math.random(#colorsSet) until rbTo ~= rbFrom
@@ -2248,24 +2257,26 @@ local function applyItemESP(obj)
                     hi.FillColor = lerped; hi.OutlineColor = lerped; txt.TextColor3 = lerped
                 elseif capsuleList2[mLower] then
                     local c1, c2 = Color3.fromRGB(148,0,211), Color3.fromRGB(255,128,0)
-                    local alpha = math.abs(((t / 2) % 2) - 1)
+                    local alpha = math.abs((t % 2) - 1)
                     local lerped = c1:Lerp(c2, alpha)
                     hi.FillColor = lerped; hi.OutlineColor = lerped; txt.TextColor3 = lerped
                 elseif capsuleList3[mLower] then
                     local c1, c2 = Color3.fromRGB(0,204,153), Color3.fromRGB(255,51,51)
-                    local alpha = math.abs(((t / 2) % 2) - 1)
+                    local alpha = math.abs((t % 2) - 1)
                     local lerped = c1:Lerp(c2, alpha)
                     hi.FillColor = lerped; hi.OutlineColor = lerped; txt.TextColor3 = lerped
                 elseif capsuleList4[mLower] then
                     local c1, c2 = Color3.fromRGB(255,255,153), Color3.fromRGB(255,153,204)
-                    local alpha = math.abs(((t / 2) % 2) - 1)
+                    local alpha = math.abs((t % 2) - 1)
                     local lerped = c1:Lerp(c2, alpha)
                     hi.FillColor = lerped; hi.OutlineColor = lerped; txt.TextColor3 = lerped
                 elseif capsuleList5[mLower] then
-                    local c1, c2 = Color3.fromRGB(0,0,0), Color3.fromRGB(255,0,0)
-                    local alpha = math.abs(((t / 2) % 2) - 1)
+                    local c1, c2 = Color3.fromRGB(255,0,0), Color3.fromRGB(0,0,0)
+                    local alpha = math.abs((t % 2) - 1)
                     local lerped = c1:Lerp(c2, alpha)
                     hi.FillColor = lerped; hi.OutlineColor = lerped; txt.TextColor3 = lerped
+                elseif capsuleBase then
+                    hi.FillColor = capsuleBase; hi.OutlineColor = capsuleBase; txt.TextColor3 = capsuleBase
                 else
                     local c1, c2 = nil, nil
                     if obj.Name == "HealthKit" or obj.Name == "Bandage" then
