@@ -1813,7 +1813,8 @@ EspTab:CreateToggle({
 
                     -- highlight fades slight purple -> dark blue -> back to purple
                     local fade = (math.sin(tick() * 2) + 1) / 2
-                    highlight.FillColor = Color3.fromRGB(170, 120, 230):Lerp(Color3.fromRGB(10, 25, 110), fade)
+                    local fadeColor = Color3.fromRGB(170, 120, 230):Lerp(Color3.fromRGB(10, 25, 110), fade)
+                    highlight.FillColor = fadeColor
                     textLabel.TextColor3 = targetColor
                 end
             end)
@@ -2303,7 +2304,9 @@ local function applyItemESP(obj)
                 if mLower ~= "" then
                     -- research capsules: highlight fill fades slight purple -> dark blue -> back, like the Twisted ESP
                     local fade = (math.sin(t * 2) + 1) / 2
-                    hi.FillColor = Color3.fromRGB(170, 120, 230):Lerp(Color3.fromRGB(10, 25, 110), fade)
+                    local fadeColor = Color3.fromRGB(170, 120, 230):Lerp(Color3.fromRGB(10, 25, 110), fade)
+                    hi.FillColor = fadeColor
+                    hi.OutlineColor = fadeColor
                 end
                 task.wait(mLower ~= "" and 0.05 or 0.15)
             end
