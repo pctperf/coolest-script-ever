@@ -684,25 +684,8 @@ function Looey:CreateWindow(cfg)
 	})
 	round(main, 14)
 	outline(main, c.gold, 1.5, 0.35)
-	-- animated light blue <-> dark blue gradient that slides across the window
-	main.BackgroundColor3 = white
-	local mainGrad = new("UIGradient", {
-		Color = ColorSequence.new({
-			ColorSequenceKeypoint.new(0, Color3.fromRGB(80,150,230)),
-			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(10,25,75)),
-			ColorSequenceKeypoint.new(1, Color3.fromRGB(80,150,230)),
-		}),
-		Rotation = 45, Offset = Vector2.new(-0.5, 0), Parent = main,
-	})
-	tw(mainGrad, 4, {Offset = Vector2.new(0.5, 0)}, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
-	task.spawn(function()
-		local dir = 1
-		while main.Parent do
-			task.wait(4)
-			dir = -dir
-			tw(mainGrad, 4, {Offset = Vector2.new(0.5 * dir, 0)}, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
-		end
-	end)
+	-- solid dark blue background
+	main.BackgroundColor3 = Color3.fromRGB(10,25,75)
 	self.main = main
 
 	local bar = new("Frame", {
@@ -3001,40 +2984,6 @@ PlayerTab:CreateToggle({
     end
 })
 
-PlayerTab:CreateButton({
-    Name = "Anti Lag",
-    Callback = function()
-        pcall(function()
-            Lighting.GlobalShadows = false
-            Lighting.FogEnd = 9e9
-
-            for _, v in pairs(Lighting:GetChildren()) do
-                if v:IsA("PostEffect") or v:IsA("BlurEffect") or v:IsA("SunRaysEffect") or v:IsA("ColorCorrectionEffect") or v:IsA("BloomEffect") then
-                    v.Enabled = false
-                end
-            end
-
-            local function optimizeObject(object)
-                if object:IsA("ParticleEmitter") or object:IsA("Trail") or object:IsA("Smoke") or object:IsA("Fire") or object:IsA("Sparkles") or object:IsA("Light") then
-                    object.Enabled = false
-                elseif object:IsA("BasePart") then
-                    object.Material = Enum.Material.SmoothPlastic
-                    object.Reflectance = 0
-                    object.CastShadow = false
-                elseif object:IsA("Decal") or object:IsA("Texture") then
-                    object.Transparency = 1
-                end
-            end
-
-            for _, descendant in pairs(Workspace:GetDescendants()) do optimizeObject(descendant) end
-            Workspace.DescendantAdded:Connect(function(descendant)
-                task.wait()
-                optimizeObject(descendant)
-            end)
-        end)
-    end
-})
-
 local noSlipperyEnabled = false
 local defaultPhysicalProperties = {}
 local brakeConnection = nil
@@ -3286,27 +3235,54 @@ PlayerTab:CreateToggle({
     end
 })
 
-PlayerTab:CreateButton({
-    Name = "Ability Infinite Range",
-    Callback = function()
-        pcall(function()
-            local toonsTable = {Shelly = true, Sprout = true, Cosmo = true, Scraps = true, Glisten = true}
-            for _, conn in pairs(getconnections(RunService.RenderStepped)) do
-                local func = conn.Function
-                if func then
-                    local ok, upvals = pcall(getupvalues, func)
-                    if ok and upvals then
-                        for _, val in pairs(upvals) do
-                            if typeof(val) == "table" and val.Name and toonsTable[val.Name] and val.PlayerRadius then
+local infiniteRangeEnabled = false
+local originalRadius = setmetatable({}, {__mode = "k"})
+
+local function applyInfiniteRange(on)
+    pcall(function()
+        local toonsTable = {Shelly = true, Sprout = true, Cosmo = true, Scraps = true, Glisten = true}
+        for _, conn in pairs(getconnections(RunService.RenderStepped)) do
+            local func = conn.Function
+            if func then
+                local ok, upvals = pcall(getupvalues, func)
+                if ok and upvals then
+                    for _, val in pairs(upvals) do
+                        if typeof(val) == "table" and val.Name and toonsTable[val.Name] and val.PlayerRadius then
+                            if on then
+                                if originalRadius[val] == nil then originalRadius[val] = val.PlayerRadius end
                                 val.PlayerRadius = 500
+                            elseif originalRadius[val] ~= nil then
+                                val.PlayerRadius = originalRadius[val]
+                                originalRadius[val] = nil
                             end
                         end
                     end
                 end
             end
-        end)
-    end,
+        end
+    end)
+end
+
+PlayerTab:CreateToggle({
+    Name = "Ability Infinite Range",
+    CurrentValue = false,
+    Flag = "AbilityInfiniteRangeToggle",
+    Callback = function(v)
+        infiniteRangeEnabled = v
+        applyInfiniteRange(v)
+    end
 })
+
+task.spawn(function()
+    while true do
+        if infiniteRangeEnabled then
+            applyInfiniteRange(true)
+            task.wait(1)
+        else
+            task.wait(0.5)
+        end
+    end
+end)
 
 local MachineTab = Window:CreateTab("Machine", 120555476154580)
 MachineTab:CreateToggle({ Name = "Instant Skillcheck", CurrentValue = false, Flag = "InstantSkillcheck", Callback = function(v) getgenv().scinstant = v end })
