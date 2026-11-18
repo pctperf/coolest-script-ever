@@ -774,7 +774,7 @@ function Looey:CreateWindow(cfg)
 		AnchorPoint = Vector2.new(0.5,0.5), Position = self.btnPos,
 		Size = UDim2.fromOffset(self.btnSize, self.btnSize), BackgroundColor3 = c.bg,
 		BorderSizePixel = 0, Visible = true, ZIndex = 20, Parent = gui,
-		Image = "rbxassetid://102542643400249",
+		Image = "rbxassetid://87495559487333",
 	})
 	local starCorner = round(star, 12)
 	self.starCorner = starCorner
@@ -877,7 +877,7 @@ function Looey:intro(done)
 		SortOrder = Enum.SortOrder.LayoutOrder, Parent = holder,
 	})
 
-	local lines = {"Welcome To...", "astro hates you", "This script was Discontinued."}
+	local lines = {"Welcome To...", "astro hates you", "astro"}
 
 	task.spawn(function()
 		for i, text in ipairs(lines) do
