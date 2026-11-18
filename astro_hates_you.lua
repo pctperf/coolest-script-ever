@@ -16,19 +16,19 @@ local plr = Players.LocalPlayer
 
 local white = Color3.fromRGB(255,255,255)
 
--- looey showtime colors (Gold Theme)
+-- blue theme (key names kept so the rest of the script still works)
 local c = {
-	bg = Color3.fromRGB(40,35,15),
-	panel = Color3.fromRGB(60,52,20),
-	panel2 = Color3.fromRGB(80,70,25),
-	track = Color3.fromRGB(100,88,30),
-	gold = Color3.fromRGB(255,211,122),
-	rose = Color3.fromRGB(255,180,80),
-	cyan = Color3.fromRGB(255,240,150),
-	text = Color3.fromRGB(255,246,236),
-	dim = Color3.fromRGB(220,195,140),
+	bg = Color3.fromRGB(10,22,55),
+	panel = Color3.fromRGB(18,40,95),
+	panel2 = Color3.fromRGB(28,62,135),
+	track = Color3.fromRGB(40,80,160),
+	gold = Color3.fromRGB(130,200,255),
+	rose = Color3.fromRGB(70,130,230),
+	cyan = Color3.fromRGB(190,230,255),
+	text = Color3.fromRGB(240,248,255),
+	dim = Color3.fromRGB(150,190,235),
 	green = Color3.fromRGB(132,238,178),
-	dark = Color3.fromRGB(25,22,8),
+	dark = Color3.fromRGB(6,12,32),
 }
 
 local font = Enum.Font.Gotham
@@ -684,7 +684,25 @@ function Looey:CreateWindow(cfg)
 	})
 	round(main, 14)
 	outline(main, c.gold, 1.5, 0.35)
-	gradient(main, c.bg, c.panel, 90)
+	-- animated light blue <-> dark blue gradient that slides across the window
+	main.BackgroundColor3 = white
+	local mainGrad = new("UIGradient", {
+		Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(80,150,230)),
+			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(10,25,75)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(80,150,230)),
+		}),
+		Rotation = 45, Offset = Vector2.new(-0.5, 0), Parent = main,
+	})
+	tw(mainGrad, 4, {Offset = Vector2.new(0.5, 0)}, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
+	task.spawn(function()
+		local dir = 1
+		while main.Parent do
+			task.wait(4)
+			dir = -dir
+			tw(mainGrad, 4, {Offset = Vector2.new(0.5 * dir, 0)}, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
+		end
+	end)
 	self.main = main
 
 	local bar = new("Frame", {
