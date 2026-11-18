@@ -2300,7 +2300,12 @@ local function applyItemESP(obj)
                         hi.FillColor = lerpedColor; hi.OutlineColor = lerpedColor; txt.TextColor3 = lerpedColor
                     end
                 end
-                task.wait(0.15)
+                if mLower ~= "" then
+                    -- research capsules: highlight fill fades slight purple -> dark blue -> back, like the Twisted ESP
+                    local fade = (math.sin(t * 2) + 1) / 2
+                    hi.FillColor = Color3.fromRGB(170, 120, 230):Lerp(Color3.fromRGB(10, 25, 110), fade)
+                end
+                task.wait(mLower ~= "" and 0.05 or 0.15)
             end
         end)
     end
