@@ -1704,7 +1704,11 @@ EspTab:CreateToggle({
         twistedEspEnabled = v
 
         local ColorChangingList = { ["GourdyMonster"] = true, ["BassieMonster"] = true, ["BobetteMonster"] = true, ["VeeMonster"] = true, ["DyleMonster"] = true, ["DandyMonster"] = true, ["AstroMonster"] = true, ["PebbleMonster"] = true, ["ShellyMonster"] = true, ["SproutMonster"] = true }
-        local Colors = { Color3.fromRGB(148, 0, 211), Color3.fromRGB(255, 0, 0), Color3.fromRGB(255, 255, 0), Color3.fromRGB(0, 255, 0), Color3.fromRGB(255, 165, 0), Color3.fromRGB(0, 0, 255) }
+        local Colors = {
+            Color3.fromRGB(30, 144, 255), Color3.fromRGB(65, 105, 225), Color3.fromRGB(135, 206, 250),
+            Color3.fromRGB(148, 0, 211), Color3.fromRGB(138, 43, 226), Color3.fromRGB(186, 85, 211),
+            Color3.fromRGB(255, 105, 180), Color3.fromRGB(255, 20, 147), Color3.fromRGB(255, 182, 193),
+        }
         local CommonList = { ["BoxtenMonster"] = true, ["PoppyMonster"] = true, ["BrushaMonster"] = true, ["ShrimpoMonster"] = true, ["RudieMonster"] = true, ["EggsonMonster"] = true, ["RibeccaMonster"] = true, ["YattaMonster"] = true, ["TishaMonster"] = true, ["LooeyMonster"] = true, ["CosmoMonster"] = true }
         local UncommonList = { ["FinnMonster"] = true, ["TeaganMonster"] = true, ["RodgerMonster"] = true, ["RazzleDazzleMonster"] = true, ["SoulvesterMonster"] = true, ["GingerMonster"] = true, ["FlyteMonster"] = true, ["ConnieMonster"] = true, ["BrightneyMonster"] = true, ["ToodlesMonster"] = true }
         local RareList = { ["GigiMonster"] = true, ["ScrapsMonster"] = true, ["GoobMonster"] = true, ["WaxwellMonster"] = true, ["GlistenMonster"] = true, ["FlutterMonster"] = true, ["EclipseMonster"] = true, ["CocoaMonster"] = true, ["CoalMonster"] = true, ["SquirmMonster"] = true, ["BlottMonster"] = true }
@@ -1778,14 +1782,16 @@ EspTab:CreateToggle({
 
             task.spawn(function()
                 local alpha = 0
-                local colorIndex = 1
+                local colorIndex = math.random(#Colors)
+                local nextIndex = math.random(#Colors)
 
                 while twistedEspEnabled and model and model.Parent and highlight and highlight.Parent do
                     local dt = task.wait(0.05)
                     alpha = alpha + (dt / 1.0)
                     if alpha >= 1 then
                         alpha = 0
-                        colorIndex = colorIndex % #Colors + 1
+                        colorIndex = nextIndex
+                        repeat nextIndex = math.random(#Colors) until nextIndex ~= colorIndex
                     end
 
                     local targetColor = baseTextColor
@@ -1801,7 +1807,7 @@ EspTab:CreateToggle({
                         targetColor = XmasColors[1]:Lerp(XmasColors[2], pingPongAlpha)
                     elseif ColorChangingList[model.Name] then
                         local c1 = Colors[colorIndex]
-                        local c2 = Colors[colorIndex % #Colors + 1]
+                        local c2 = Colors[nextIndex]
                         targetColor = c1:Lerp(c2, alpha)
                     end
 
@@ -1993,6 +1999,7 @@ EspTab:CreateToggle({
             if not humanoid then return end
 
             local owner = Players:GetPlayerFromCharacter(char)
+            if not owner and char.Name:lower():find("dandy") then return end
             local displayName = owner and owner.Name or char.Name
             if playerBlacklist[displayName] then return end
 
@@ -2219,15 +2226,25 @@ local function applyItemESP(obj)
 
         local mLower = monsterNameRaw:lower()
 
+        local colorsSet = {
+            Color3.fromRGB(30,144,255), Color3.fromRGB(65,105,225), Color3.fromRGB(135,206,250),
+            Color3.fromRGB(148,0,211), Color3.fromRGB(138,43,226), Color3.fromRGB(186,85,211),
+            Color3.fromRGB(255,105,180), Color3.fromRGB(255,20,147), Color3.fromRGB(255,182,193),
+        }
+        local rbFrom, rbTo, rbStart = math.random(#colorsSet), math.random(#colorsSet), tick()
+
         task.spawn(function()
             while itemEspEnabled and obj and obj.Parent and hi and txt do
                 local t = tick()
                 if capsuleList1[mLower] then
-                    local colorsSet = {Color3.fromRGB(148,0,211), Color3.fromRGB(135,206,250), Color3.fromRGB(255,255,0), Color3.fromRGB(255,165,0), Color3.fromRGB(255,0,0)}
-                    local idx = math.floor((t * 2) % #colorsSet) + 1
-                    local nextIdx = (idx % #colorsSet) + 1
-                    local alpha = (t * 2) % 1
-                    local lerped = colorsSet[idx]:Lerp(colorsSet[nextIdx], alpha)
+                    local alpha = (t - rbStart) / 0.5
+                    if alpha >= 1 then
+                        rbFrom = rbTo
+                        repeat rbTo = math.random(#colorsSet) until rbTo ~= rbFrom
+                        rbStart = t
+                        alpha = 0
+                    end
+                    local lerped = colorsSet[rbFrom]:Lerp(colorsSet[rbTo], alpha)
                     hi.FillColor = lerped; hi.OutlineColor = lerped; txt.TextColor3 = lerped
                 elseif capsuleList2[mLower] then
                     local c1, c2 = Color3.fromRGB(148,0,211), Color3.fromRGB(255,128,0)
