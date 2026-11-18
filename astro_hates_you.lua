@@ -1950,6 +1950,20 @@ local playerEspEnabled = false
 local playerDisableNametags = false
 local activePlayerNametags = {}
 
+local playerEspConn = nil
+
+local function isTwistedModel(m)
+    return TwistedMonsterNames[m.Name] == true or m.Name:match("Monster$") ~= nil
+end
+
+local function clearPlayerEsp()
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if (obj.Name == "CustomChams" and obj:IsA("Highlight")) or (obj.Name == "CustomNametag" and obj:IsA("BillboardGui")) then
+            obj:Destroy()
+        end
+    end
+end
+
 EspTab:CreateToggle({
     Name = "Player Esp",
     CurrentValue = false,
@@ -1965,100 +1979,109 @@ EspTab:CreateToggle({
         local COLOR_LOW_GREEN = Color3.fromRGB(0, 180, 0)
         local COLOR_CRIT_GREEN = Color3.fromRGB(0, 100, 0)
 
-        local function setupESP(player)
-            if player == LocalPlayer then return end
+        -- highlights every model that has a Humanoid (all players), skipping you and the Twisteds
+        local function setupHumanoidModel(char)
+            if not playerEspEnabled then return end
+            if not char or not char:IsA("Model") then return end
+            if char == LocalPlayer.Character then return end
+            if isTwistedModel(char) then return end
+            if char:FindFirstChild("CustomChams") then return end
 
-            local function setupCharacter(char)
-                if not char then return end
-                if playerBlacklist[player.Name] then return end
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+            if not humanoid then return end
 
-                local humanoidRootPart = char:WaitForChild("HumanoidRootPart", 5)
-                local humanoid = char:WaitForChild("Humanoid", 5)
-                local head = char:WaitForChild("Head", 5)
+            local owner = Players:GetPlayerFromCharacter(char)
+            local displayName = owner and owner.Name or char.Name
+            if playerBlacklist[displayName] then return end
 
-                if not humanoidRootPart or not humanoid or not head then return end
+            local head = char:FindFirstChild("Head") or char:WaitForChild("Head", 2) or char.PrimaryPart or char:FindFirstChildWhichIsA("BasePart", true)
+            if not head then return end
 
-                if char:FindFirstChild("CustomChams") then char.CustomChams:Destroy() end
-                if char:FindFirstChild("CustomNametag") then char.CustomNametag:Destroy() end
+            if not playerEspEnabled or char:FindFirstChild("CustomChams") then return end
 
-                if not playerEspEnabled then return end
+            local highlight = Instance.new("Highlight")
+            highlight.Name = "CustomChams"
+            highlight.Adornee = char
+            highlight.FillTransparency = 0.5
+            highlight.OutlineTransparency = 0
+            highlight.Parent = char
 
-                local highlight = Instance.new("Highlight")
-                highlight.Name = "CustomChams"
-                highlight.Adornee = char
-                highlight.FillTransparency = 0.5
-                highlight.OutlineTransparency = 0
-                highlight.Parent = char
+            local billboard = Instance.new("BillboardGui")
+            billboard.Name = "CustomNametag"
+            billboard.Adornee = head
+            billboard.Size = UDim2.new(0, 200, 0, 50)
+            billboard.StudsOffset = Vector3.new(0, 2.5, 0)
+            billboard.AlwaysOnTop = true
+            billboard.Enabled = not playerDisableNametags
+            billboard.Parent = char
 
-                local billboard = Instance.new("BillboardGui")
-                billboard.Name = "CustomNametag"
-                billboard.Adornee = head
-                billboard.Size = UDim2.new(0, 200, 0, 50)
-                billboard.StudsOffset = Vector3.new(0, 2.5, 0)
-                billboard.AlwaysOnTop = true
-                billboard.Enabled = not playerDisableNametags
-                billboard.Parent = char
+            table.insert(activePlayerNametags, billboard)
 
-                table.insert(activePlayerNametags, billboard)
+            local layout = Instance.new("UIListLayout", billboard)
+            layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+            layout.VerticalAlignment = Enum.VerticalAlignment.Center
 
-                local layout = Instance.new("UIListLayout", billboard)
-                layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-                layout.VerticalAlignment = Enum.VerticalAlignment.Center
+            local nameLabel = Instance.new("TextLabel", billboard)
+            nameLabel.Name = "NickLabel"
+            nameLabel.Size = UDim2.new(1, 0, 0, 25)
+            nameLabel.BackgroundTransparency = 1
+            nameLabel.Text = displayName
+            nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+            nameLabel.TextSize = 9
+            nameLabel.Font = Enum.Font.FredokaOne
+            nameLabel.TextStrokeTransparency = 0.5
 
-                local nameLabel = Instance.new("TextLabel", billboard)
-                nameLabel.Name = "NickLabel"
-                nameLabel.Size = UDim2.new(1, 0, 0, 25)
-                nameLabel.BackgroundTransparency = 1
-                nameLabel.Text = player.Name
-                nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-                nameLabel.TextSize = 9
-                nameLabel.Font = Enum.Font.FredokaOne
-                nameLabel.TextStrokeTransparency = 0.5
+            local healthLabel = Instance.new("TextLabel", billboard)
+            healthLabel.Name = "HealthLabel"
+            healthLabel.Size = UDim2.new(1, 0, 0, 25)
+            healthLabel.BackgroundTransparency = 1
+            healthLabel.TextSize = 9
+            healthLabel.Font = Enum.Font.FredokaOne
+            healthLabel.TextStrokeTransparency = 0.5
 
-                local healthLabel = Instance.new("TextLabel", billboard)
-                healthLabel.Name = "HealthLabel"
-                healthLabel.Size = UDim2.new(1, 0, 0, 25)
-                healthLabel.BackgroundTransparency = 1
-                healthLabel.TextSize = 9
-                healthLabel.Font = Enum.Font.FredokaOne
-                healthLabel.TextStrokeTransparency = 0.5
+            local connection
+            connection = RunService.RenderStepped:Connect(function()
+                if not playerEspEnabled or not char or not char.Parent or not humanoid or not humanoid.Parent or humanoid.Health <= 0 or playerBlacklist[displayName] then
+                    if highlight then highlight:Destroy() end
+                    if billboard then billboard:Destroy() end
+                    if connection then connection:Disconnect() end
+                    return
+                end
 
-                local connection
-                connection = RunService.RenderStepped:Connect(function()
-                    if not playerEspEnabled or not char or not char.Parent or not humanoid or humanoid.Health <= 0 or playerBlacklist[player.Name] then
-                        if highlight then highlight:Destroy() end
-                        if billboard then billboard:Destroy() end
-                        if connection then connection:Disconnect() end
-                        return
-                    end
+                local currentHp = math.floor(humanoid.Health)
+                healthLabel.Text = "Health: " .. currentHp
 
-                    local currentHp = math.floor(humanoid.Health)
-                    healthLabel.Text = "Health: " .. currentHp
-
-                    if currentHp == 1 then
-                        highlight.FillColor = COLOR_CRIT_BLUE; highlight.OutlineColor = COLOR_CRIT_BLUE; healthLabel.TextColor3 = COLOR_CRIT_GREEN
-                    elseif currentHp <= 2 then
-                        highlight.FillColor = COLOR_LOW_BLUE; highlight.OutlineColor = COLOR_LOW_BLUE; healthLabel.TextColor3 = COLOR_LOW_GREEN
-                    else
-                        highlight.FillColor = COLOR_NORMAL_BLUE; highlight.OutlineColor = COLOR_NORMAL_BLUE; healthLabel.TextColor3 = COLOR_NORMAL_GREEN
-                    end
-                end)
-            end
-
-            if player.Character then setupCharacter(player.Character) end
-            player.CharacterAdded:Connect(setupCharacter)
+                if currentHp == 1 then
+                    highlight.FillColor = COLOR_CRIT_BLUE; highlight.OutlineColor = COLOR_CRIT_BLUE; healthLabel.TextColor3 = COLOR_CRIT_GREEN
+                elseif currentHp <= 2 then
+                    highlight.FillColor = COLOR_LOW_BLUE; highlight.OutlineColor = COLOR_LOW_BLUE; healthLabel.TextColor3 = COLOR_LOW_GREEN
+                else
+                    highlight.FillColor = COLOR_NORMAL_BLUE; highlight.OutlineColor = COLOR_NORMAL_BLUE; healthLabel.TextColor3 = COLOR_NORMAL_GREEN
+                end
+            end)
         end
 
         if playerEspEnabled then
-            for _, p in ipairs(Players:GetPlayers()) do setupESP(p) end
-        else
-            activePlayerNametags = {}
-            for _, p in ipairs(Players:GetPlayers()) do
-                if p.Character then
-                    if p.Character:FindFirstChild("CustomChams") then p.Character.CustomChams:Destroy() end
-                    if p.Character:FindFirstChild("CustomNametag") then p.Character.CustomNametag:Destroy() end
+            for _, obj in ipairs(Workspace:GetDescendants()) do
+                if obj:IsA("Humanoid") then
+                    task.spawn(setupHumanoidModel, obj.Parent)
                 end
             end
+
+            if playerEspConn then playerEspConn:Disconnect() end
+            playerEspConn = Workspace.DescendantAdded:Connect(function(obj)
+                if playerEspEnabled and obj:IsA("Humanoid") then
+                    task.wait(0.1)
+                    setupHumanoidModel(obj.Parent)
+                end
+            end)
+        else
+            if playerEspConn then
+                playerEspConn:Disconnect()
+                playerEspConn = nil
+            end
+            activePlayerNametags = {}
+            clearPlayerEsp()
         end
     end
 })
