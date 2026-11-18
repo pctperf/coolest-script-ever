@@ -774,7 +774,7 @@ function Looey:CreateWindow(cfg)
 		AnchorPoint = Vector2.new(0.5,0.5), Position = self.btnPos,
 		Size = UDim2.fromOffset(self.btnSize, self.btnSize), BackgroundColor3 = c.bg,
 		BorderSizePixel = 0, Visible = true, ZIndex = 20, Parent = gui,
-		Image = "rbxassetid://87495559487333",
+		Image = "rbxassetid://121374428235477",
 	})
 	local starCorner = round(star, 12)
 	self.starCorner = starCorner
