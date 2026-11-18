@@ -1781,7 +1781,7 @@ EspTab:CreateToggle({
                 local colorIndex = 1
 
                 while twistedEspEnabled and model and model.Parent and highlight and highlight.Parent do
-                    local dt = task.wait(0.15)
+                    local dt = task.wait(0.05)
                     alpha = alpha + (dt / 1.0)
                     if alpha >= 1 then
                         alpha = 0
@@ -1805,7 +1805,9 @@ EspTab:CreateToggle({
                         targetColor = c1:Lerp(c2, alpha)
                     end
 
-                    highlight.FillColor = targetColor
+                    -- highlight fades slight purple -> dark blue -> back to purple
+                    local fade = (math.sin(tick() * 2) + 1) / 2
+                    highlight.FillColor = Color3.fromRGB(170, 120, 230):Lerp(Color3.fromRGB(10, 25, 110), fade)
                     textLabel.TextColor3 = targetColor
                 end
             end)
