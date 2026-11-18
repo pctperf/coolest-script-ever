@@ -1413,11 +1413,20 @@ end)
 
 local AutomationTab = Window:CreateTab("Automation", 71680025256265)
 
+-- sound button: change SOUND_ID to any sound you like (rbxassetid://NUMBER)
+local SOUND_ID = "rbxasset://sounds/electronicpingshort.wav"
+local clickSound = Instance.new("Sound")
+clickSound.Name = "AstroClickSound"
+clickSound.SoundId = SOUND_ID
+clickSound.Volume = 1
+clickSound.Parent = game:GetService("SoundService")
+
 AutomationTab:CreateButton({
-    Name = "Autofarm",
+    Name = "Play Sound",
     Callback = function()
         pcall(function()
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/BluuGuy-Sure/BluuHead-Dandy-s-World/refs/heads/main/JustThisOnce.lua"))()
+            clickSound.TimePosition = 0
+            clickSound:Play()
         end)
     end
 })
