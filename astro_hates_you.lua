@@ -1413,11 +1413,16 @@ end)
 
 local AutomationTab = Window:CreateTab("Automation", 71680025256265)
 
--- sound button: change SOUND_ID to any sound you like (rbxassetid://NUMBER)
-local SOUND_ID = "rbxassetid://120119228376767"
+-- sound button: picks one of these at random each click (add or remove IDs as you like)
+local SOUND_IDS = {
+    "rbxassetid://87343402066963",
+    "rbxassetid://119660706522561",
+    "rbxassetid://95788498610061",
+    "rbxassetid://120119228376767",
+}
+local lastSoundIndex = nil
 local clickSound = Instance.new("Sound")
 clickSound.Name = "AstroClickSound"
-clickSound.SoundId = SOUND_ID
 clickSound.Volume = 1
 clickSound.Parent = game:GetService("SoundService")
 
@@ -1425,6 +1430,13 @@ AutomationTab:CreateButton({
     Name = "Play Sound",
     Callback = function()
         pcall(function()
+            local idx = math.random(#SOUND_IDS)
+            if #SOUND_IDS > 1 then
+                while idx == lastSoundIndex do idx = math.random(#SOUND_IDS) end
+            end
+            lastSoundIndex = idx
+            clickSound:Stop()
+            clickSound.SoundId = SOUND_IDS[idx]
             clickSound.TimePosition = 0
             clickSound:Play()
         end)
