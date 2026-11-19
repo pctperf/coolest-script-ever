@@ -1427,7 +1427,7 @@ clickSound.Volume = 1
 clickSound.Parent = game:GetService("SoundService")
 
 AutomationTab:CreateButton({
-    Name = "Play Sound",
+    Name = "listen to him",
     Callback = function()
         pcall(function()
             local idx = math.random(#SOUND_IDS)
