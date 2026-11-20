@@ -745,15 +745,32 @@ function Looey:CreateWindow(cfg)
 	self.content = content
 
 	-- the pulse behind the launcher button: a darker blue star
-	local glow = new("TextLabel", {
+	-- drawn from 5 bars (a pentagram) so its exact center sits on the center of the launcher
+	local glow = new("Frame", {
 		AnchorPoint = Vector2.new(0.5,0.5), Position = self.btnPos,
-		Size = UDim2.fromOffset(100, 100),
-		BackgroundTransparency = 1, BorderSizePixel = 0, Text = "\u{2605}", Font = fontBold,
-		TextSize = 100, TextColor3 = Color3.fromRGB(20,50,160), TextTransparency = 0.5,
+		Size = UDim2.fromOffset(100, 100), BackgroundTransparency = 1, BorderSizePixel = 0,
 		Visible = true, ZIndex = 19, Parent = gui,
 	})
-	-- text size tops out at 100, so a UIScale makes the star bigger than that
 	local glowScale = new("UIScale", {Name = "StarScale", Scale = 1.5, Parent = glow})
+	local glowBars = {}
+	do
+		local R, thick = 50, 9
+		local pts = {}
+		for k = 0, 4 do
+			local ang = math.rad(-90 + k * 72)
+			pts[k] = Vector2.new(math.cos(ang) * R, math.sin(ang) * R)
+		end
+		for k = 0, 4 do
+			local a, b = pts[k], pts[(k + 2) % 5]
+			local mid, d = (a + b) / 2, b - a
+			table.insert(glowBars, new("Frame", {
+				AnchorPoint = Vector2.new(0.5,0.5), Position = UDim2.new(0.5, mid.X, 0.5, mid.Y),
+				Size = UDim2.fromOffset(d.Magnitude + thick * 0.6, thick), Rotation = math.deg(math.atan2(d.Y, d.X)),
+				BackgroundColor3 = Color3.fromRGB(20,50,160), BackgroundTransparency = 0.5,
+				BorderSizePixel = 0, ZIndex = 19, Parent = glow,
+			}))
+		end
+	end
 	self.glow = glow
 
 	local star = new("ImageButton", {
@@ -788,8 +805,21 @@ function Looey:CreateWindow(cfg)
 			local size = ((self.btnSize or 58) + 30 + pulse * 12) * 1.8
 			glow.Size = UDim2.fromOffset(100, 100)
 			glowScale.Scale = size / 100
-			glow.Rotation = (tick() * 50) % 360
-			glow.TextTransparency = 0.5 - pulse * 0.12
+			local turn = (tick() * 50) % 360
+			glow.Rotation = turn
+
+			-- fades out as it finishes a full spin, then fades back in as the next spin starts
+			local phase = turn / 360
+			local gone = 0
+			if phase > 0.8 then gone = (phase - 0.8) / 0.2
+			elseif phase < 0.1 then gone = (0.1 - phase) / 0.1 end
+			gone = (1 - math.cos(gone * math.pi)) / 2
+
+			local base = 0.5 - pulse * 0.12
+			local transparency = 1 - (1 - base) * (1 - gone)
+			for _, bar in ipairs(glowBars) do
+				bar.BackgroundTransparency = transparency
+			end
 		end
 	end)
 
