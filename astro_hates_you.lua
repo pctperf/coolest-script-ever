@@ -747,11 +747,13 @@ function Looey:CreateWindow(cfg)
 	-- the pulse behind the launcher button: a darker blue star
 	local glow = new("TextLabel", {
 		AnchorPoint = Vector2.new(0.5,0.5), Position = self.btnPos,
-		Size = UDim2.fromOffset(self.btnSize + 16, self.btnSize + 16),
+		Size = UDim2.fromOffset(100, 100),
 		BackgroundTransparency = 1, BorderSizePixel = 0, Text = "\u{2605}", Font = fontBold,
-		TextSize = 80, TextColor3 = Color3.fromRGB(20,50,160), TextTransparency = 0.5,
+		TextSize = 100, TextColor3 = Color3.fromRGB(20,50,160), TextTransparency = 0.5,
 		Visible = true, ZIndex = 19, Parent = gui,
 	})
+	-- text size tops out at 100, so a UIScale makes the star bigger than that
+	local glowScale = new("UIScale", {Name = "StarScale", Scale = 1.5, Parent = glow})
 	self.glow = glow
 
 	local star = new("ImageButton", {
@@ -783,9 +785,10 @@ function Looey:CreateWindow(cfg)
 		if star.Parent then
 			glow.Position = star.Position
 			local pulse = math.sin(tick() * 2.2)
-			local size = (self.btnSize or 58) + 8 + pulse * 10
-			glow.Size = UDim2.fromOffset(size, size)
-			glow.TextSize = math.clamp(math.floor(size * 1.25), 8, 100)
+			local size = ((self.btnSize or 58) + 30 + pulse * 12) * 1.8
+			glow.Size = UDim2.fromOffset(100, 100)
+			glowScale.Scale = size / 100
+			glow.Rotation = (tick() * 50) % 360
 			glow.TextTransparency = 0.5 - pulse * 0.12
 		end
 	end)
