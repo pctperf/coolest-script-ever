@@ -1391,7 +1391,8 @@ local TwistedMonsterNames = {
     ["FlutterMonster"] = true, ["ShellyMonster"] = true, ["PebbleMonster"] = true, ["VeeMonster"] = true,
     ["AstroMonster"] = true, ["SproutMonster"] = true, ["BobetteMonster"] = true, ["BassieMonster"] = true,
     ["DyleMonster"] = true, ["DandyMonster"] = true, ["GourdyMonster"] = true, ["TeaganMonster"] = true,
-    ["RodgerMonster"] = true, ["RazzleDazzleMonster"] = true, ["ConnieMonster"] = true, ["WaxwellMonster"] = true
+    ["RodgerMonster"] = true, ["RazzleDazzleMonster"] = true, ["ConnieMonster"] = true, ["WaxwellMonster"] = true,
+    ["DiodaMonster"] = true, ["DessaMonster"] = true
 }
 
 local function isTwistedNearby(targetPos, maxDist)
@@ -1868,7 +1869,7 @@ EspTab:CreateToggle({
         local RareList = { ["GigiMonster"] = true, ["ScrapsMonster"] = true, ["GoobMonster"] = true, ["WaxwellMonster"] = true, ["GlistenMonster"] = true, ["FlutterMonster"] = true, ["EclipseMonster"] = true, ["CocoaMonster"] = true, ["CoalMonster"] = true, ["SquirmMonster"] = true, ["BlottMonster"] = true }
         local BlotHandsList = { ["BlotHand"] = true, ["BlotHand_L"] = true, ["BlotHand_R"] = true }
         local MainList = { ["ShellyMonster"] = true, ["AstroMonster"] = true, ["PebbleMonster"] = true, ["VeeMonster"] = true, ["SproutMonster"] = true, ["BassieMonster"] = true, ["BobetteMonster"] = true, ["GourdyMonster"] = true }
-        local LethalList = { ["DandyMonster"] = true, ["DyleMonster"] = true }
+        local LethalList = { ["DandyMonster"] = true, ["DyleMonster"] = true, ["DiodaMonster"] = true, ["DessaMonster"] = true }
 
         local EasterEventList = { ["CocoaMonster"] = true, ["BassieMonster"] = true, ["FlyteMonster"] = true, ["EggsonMonster"] = true }
         local EasterColors = {Color3.fromRGB(255, 255, 153), Color3.fromRGB(255, 153, 204)}
@@ -1952,7 +1953,8 @@ EspTab:CreateToggle({
                     local pingPongAlpha = math.abs((tick() % 2) - 1)
 
                     if LethalList[model.Name] then
-                        targetColor = LethalColors[1]:Lerp(LethalColors[2], pingPongAlpha)
+                        -- lethal: smooth rainbow
+                        targetColor = Color3.fromHSV((tick() * 0.4) % 1, 1, 1)
                     elseif EasterEventList[model.Name] then
                         targetColor = EasterColors[1]:Lerp(EasterColors[2], pingPongAlpha)
                     elseif HalloweenEventList[model.Name] then
@@ -2377,7 +2379,7 @@ local function applyItemESP(obj)
         local capsuleList2 = {["ribecca"]=true, ["gourdy"]=true, ["soulvester"]=true, ["eclipse"]=true}
         local capsuleList3 = {["bobette"]=true, ["coal"]=true, ["ginger"]=true, ["rudie"]=true}
         local capsuleList4 = {["bassie"]=true, ["cocoa"]=true, ["eggson"]=true, ["flyte"]=true}
-        local capsuleList5 = {["dandy"]=true, ["dyle"]=true}
+        local capsuleList5 = {["dandy"]=true, ["dyle"]=true, ["dioda"]=true, ["dessa"]=true}
 
         local mLower = monsterNameRaw:lower()
 
@@ -2426,9 +2428,7 @@ local function applyItemESP(obj)
                     local lerped = c1:Lerp(c2, alpha)
                     hi.FillColor = lerped; hi.OutlineColor = lerped; txt.TextColor3 = lerped
                 elseif capsuleList5[mLower] then
-                    local c1, c2 = Color3.fromRGB(255,0,0), Color3.fromRGB(0,0,0)
-                    local alpha = math.abs((t % 2) - 1)
-                    local lerped = c1:Lerp(c2, alpha)
+                    local lerped = Color3.fromHSV((t * 0.4) % 1, 1, 1)
                     hi.FillColor = lerped; hi.OutlineColor = lerped; txt.TextColor3 = lerped
                 elseif capsuleBase then
                     hi.FillColor = capsuleBase; hi.OutlineColor = capsuleBase; txt.TextColor3 = capsuleBase
