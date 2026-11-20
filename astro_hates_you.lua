@@ -899,58 +899,81 @@ function Looey:ShowTabBanner(name)
 	local main = self.main
 	if not main or not main.Parent then return end
 
-	local banner = self.tabBanner
-	if not banner or not banner.Parent then
-		banner = new("Frame", {
+	local holder = self.tabBanner
+	if not holder or not holder.Parent then
+		holder = new("Frame", {
 			Name = "TabBanner", AnchorPoint = Vector2.new(0.5,1), Position = UDim2.new(0.5,0,1,-12),
 			Size = UDim2.fromOffset(0,40), AutomaticSize = Enum.AutomaticSize.X,
-			BackgroundColor3 = Color3.fromRGB(215,232,255), BackgroundTransparency = 1,
-			BorderSizePixel = 0, Visible = false, ZIndex = 60, Parent = main,
+			BackgroundTransparency = 1, BorderSizePixel = 0, Visible = false, ZIndex = 60, Parent = main,
 		})
-		round(banner, 12)
-		new("UIPadding", {PaddingLeft = UDim.new(0,6), PaddingRight = UDim.new(0,14), Parent = banner})
+		new("UIScale", {Name = "PopScale", Scale = 0.4, Parent = holder})
+
+		-- crescent moon, tilted, sits behind the text box and peeks out of its top right corner
+		new("TextLabel", {
+			Name = "Moon", Text = "\u{263E}", Font = fontBold, TextSize = 44,
+			TextColor3 = Color3.fromRGB(70,150,255), TextTransparency = 1, BackgroundTransparency = 1,
+			AnchorPoint = Vector2.new(0.5,0.5), Position = UDim2.new(1,-14,0,0),
+			Size = UDim2.fromOffset(44,44), Rotation = 20, ZIndex = 60, Parent = holder,
+		})
+
+		local pill = new("Frame", {
+			Name = "Pill", Size = UDim2.fromOffset(0,40), AutomaticSize = Enum.AutomaticSize.X,
+			BackgroundColor3 = Color3.fromRGB(215,232,255), BackgroundTransparency = 1,
+			BorderSizePixel = 0, ZIndex = 61, Parent = holder,
+		})
+		round(pill, 12)
+		new("UIPadding", {PaddingLeft = UDim.new(0,6), PaddingRight = UDim.new(0,14), Parent = pill})
 		new("UIListLayout", {
 			FillDirection = Enum.FillDirection.Horizontal, VerticalAlignment = Enum.VerticalAlignment.Center,
-			SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0,8), Parent = banner,
+			SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0,8), Parent = pill,
 		})
 		new("ImageLabel", {
 			Name = "Astro", Size = UDim2.fromOffset(32,32), BackgroundTransparency = 1,
 			Image = "rbxassetid://121374428235477", ScaleType = Enum.ScaleType.Fit,
-			ImageTransparency = 1, ZIndex = 61, LayoutOrder = 1, Parent = banner,
+			ImageTransparency = 1, ZIndex = 62, LayoutOrder = 1, Parent = pill,
 		})
 		new("TextLabel", {
 			Name = "Message", Size = UDim2.fromOffset(0,32), AutomaticSize = Enum.AutomaticSize.X,
 			BackgroundTransparency = 1, Font = fontBold, TextSize = 14, TextTransparency = 1,
-			TextColor3 = Color3.fromRGB(45,120,235), ZIndex = 61, LayoutOrder = 2, Parent = banner,
+			TextColor3 = Color3.fromRGB(45,120,235), ZIndex = 62, LayoutOrder = 2, Parent = pill,
 		})
-		self.tabBanner = banner
+		self.tabBanner = holder
 	end
 
-	local img, label = banner.Astro, banner.Message
+	local pill, moon, pop = holder.Pill, holder.Moon, holder.PopScale
+	local img, label = pill.Astro, pill.Message
 	label.Text = "this is the " .. tostring(name) .. " tab"
 
 	self.bannerToken = (self.bannerToken or 0) + 1
 	local token = self.bannerToken
 
-	banner.Visible = true
-	tw(banner, 0.2, {BackgroundTransparency = 0.08})
-	tw(img, 0.2, {ImageTransparency = 0})
-	tw(label, 0.2, {TextTransparency = 0})
+	-- pop in: starts small and overshoots a little before settling at full size
+	pop.Scale = 0.4
+	holder.Visible = true
+	tw(pop, 0.4, {Scale = 1}, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+	tw(pill, 0.15, {BackgroundTransparency = 0.08})
+	tw(img, 0.15, {ImageTransparency = 0})
+	tw(label, 0.15, {TextTransparency = 0})
+	tw(moon, 0.15, {TextTransparency = 0})
 
 	task.spawn(function()
 		local light, dark = Color3.fromRGB(45,120,235), Color3.fromRGB(10,30,110)
+		local moonBlue, moonWhite = Color3.fromRGB(70,150,255), Color3.fromRGB(255,255,255)
 		local t0 = tick()
 		while self.bannerToken == token and tick() - t0 < 2.6 do
 			local a = (1 - math.cos((tick() - t0) * 3.5)) / 2
 			label.TextColor3 = light:Lerp(dark, a)
+			moon.TextColor3 = moonBlue:Lerp(moonWhite, a)
 			task.wait()
 		end
 		if self.bannerToken ~= token then return end
-		tw(banner, 0.3, {BackgroundTransparency = 1})
-		tw(img, 0.3, {ImageTransparency = 1})
-		tw(label, 0.3, {TextTransparency = 1})
-		task.wait(0.35)
-		if self.bannerToken == token then banner.Visible = false end
+		tw(pop, 0.25, {Scale = 0.6}, Enum.EasingStyle.Back, Enum.EasingDirection.In)
+		tw(pill, 0.25, {BackgroundTransparency = 1})
+		tw(img, 0.25, {ImageTransparency = 1})
+		tw(label, 0.25, {TextTransparency = 1})
+		tw(moon, 0.25, {TextTransparency = 1})
+		task.wait(0.3)
+		if self.bannerToken == token then holder.Visible = false end
 	end)
 end
 
