@@ -802,8 +802,8 @@ function Looey:CreateWindow(cfg)
 		if star.Parent then
 			glow.Position = star.Position
 			local pulse = math.sin(tick() * 2.2)
-			-- the tips always reach about 30px past the edge of the button, whatever size the button is
-			local tipRadius = (self.btnSize or 58) / 2 + 30 + pulse * 6
+			-- the tips always reach about 14px past the edge of the button, whatever size the button is
+			local tipRadius = (self.btnSize or 58) / 2 + 14 + pulse * 4
 			glow.Size = UDim2.fromOffset(100, 100)
 			glowScale.Scale = tipRadius / 50
 			local turn = (tick() * 50) % 360
