@@ -744,12 +744,14 @@ function Looey:CreateWindow(cfg)
 	content.AutomaticCanvasSize = Enum.AutomaticSize.Y
 	self.content = content
 
-	local glow = new("Frame", {
+	-- the pulse behind the launcher button: a darker blue star
+	local glow = new("TextLabel", {
 		AnchorPoint = Vector2.new(0.5,0.5), Position = self.btnPos,
-		Size = UDim2.fromOffset(self.btnSize + 16, self.btnSize + 16), BackgroundColor3 = c.gold,
-		BackgroundTransparency = 0.85, BorderSizePixel = 0, Visible = true, ZIndex = 19, Parent = gui,
+		Size = UDim2.fromOffset(self.btnSize + 16, self.btnSize + 16),
+		BackgroundTransparency = 1, BorderSizePixel = 0, Text = "\u{2605}", Font = fontBold,
+		TextSize = 80, TextColor3 = Color3.fromRGB(20,50,160), TextTransparency = 0.5,
+		Visible = true, ZIndex = 19, Parent = gui,
 	})
-	round(glow, 16)
 	self.glow = glow
 
 	local star = new("ImageButton", {
@@ -783,7 +785,8 @@ function Looey:CreateWindow(cfg)
 			local pulse = math.sin(tick() * 2.2)
 			local size = (self.btnSize or 58) + 8 + pulse * 10
 			glow.Size = UDim2.fromOffset(size, size)
-			glow.BackgroundTransparency = 0.84 - pulse * 0.06
+			glow.TextSize = math.clamp(math.floor(size * 1.25), 8, 100)
+			glow.TextTransparency = 0.5 - pulse * 0.12
 		end
 	end)
 
