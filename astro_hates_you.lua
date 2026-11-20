@@ -894,8 +894,34 @@ function Looey:intro(done)
 	end)
 end
 
+-- saved settings: kept in getgenv() (survives closing and re-running the script) and in a file
+-- when the executor supports writefile/readfile (survives restarting the game or executor)
+local AstroCfg = {file = "astro_hates_you_settings.json"}
+do
+	local HttpService = game:GetService("HttpService")
+	local data
+	pcall(function() if getgenv then data = getgenv().AstroSettings end end)
+	if type(data) ~= "table" then
+		data = {}
+		pcall(function()
+			if isfile and readfile and isfile(AstroCfg.file) then
+				local decoded = HttpService:JSONDecode(readfile(AstroCfg.file))
+				if type(decoded) == "table" then data = decoded end
+			end
+		end)
+	end
+	AstroCfg.data = data
+	function AstroCfg.save()
+		pcall(function() if getgenv then getgenv().AstroSettings = AstroCfg.data end end)
+		pcall(function()
+			if writefile then writefile(AstroCfg.file, HttpService:JSONEncode(AstroCfg.data)) end
+		end)
+	end
+end
+
 -- astro pops up at the bottom of the window and says which tab you opened
 function Looey:ShowTabBanner(name)
+	if AstroCfg.data.tabBanner == false then return end
 	local main = self.main
 	if not main or not main.Parent then return end
 
@@ -942,38 +968,67 @@ function Looey:ShowTabBanner(name)
 
 	local pill, moon, pop = holder.Pill, holder.Moon, holder.PopScale
 	local img, label = pill.Astro, pill.Message
-	label.Text = "this is the " .. tostring(name) .. " tab"
 
 	self.bannerToken = (self.bannerToken or 0) + 1
 	local token = self.bannerToken
 
-	-- pop in: starts small and overshoots a little before settling at full size
-	pop.Scale = 0.4
-	holder.Visible = true
-	tw(pop, 0.4, {Scale = 1}, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-	tw(pill, 0.15, {BackgroundTransparency = 0.08})
-	tw(img, 0.15, {ImageTransparency = 0})
-	tw(label, 0.15, {TextTransparency = 0})
-	tw(moon, 0.15, {TextTransparency = 0})
+	-- one full pop in -> hold (colors fade back and forth) -> fade out cycle
+	-- returns false if a newer banner took over while this one was playing
+	local function runPhase(text, image, c1, c2)
+		if self.bannerToken ~= token then return false end
+		label.Text = text
+		img.Image = image
 
-	task.spawn(function()
-		local light, dark = Color3.fromRGB(45,120,235), Color3.fromRGB(10,30,110)
+		pop.Scale = 0.4
+		holder.Visible = true
+		tw(pop, 0.4, {Scale = 1}, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+		tw(pill, 0.15, {BackgroundTransparency = 0.08})
+		tw(img, 0.15, {ImageTransparency = 0})
+		tw(label, 0.15, {TextTransparency = 0})
+		tw(moon, 0.15, {TextTransparency = 0})
+
 		local moonBlue, moonWhite = Color3.fromRGB(70,150,255), Color3.fromRGB(255,255,255)
 		local t0 = tick()
 		while self.bannerToken == token and tick() - t0 < 2.6 do
 			local a = (1 - math.cos((tick() - t0) * 3.5)) / 2
-			label.TextColor3 = light:Lerp(dark, a)
+			label.TextColor3 = c1:Lerp(c2, a)
 			moon.TextColor3 = moonBlue:Lerp(moonWhite, a)
 			task.wait()
 		end
-		if self.bannerToken ~= token then return end
+		if self.bannerToken ~= token then return false end
+
 		tw(pop, 0.25, {Scale = 0.6}, Enum.EasingStyle.Back, Enum.EasingDirection.In)
 		tw(pill, 0.25, {BackgroundTransparency = 1})
 		tw(img, 0.25, {ImageTransparency = 1})
 		tw(label, 0.25, {TextTransparency = 1})
 		tw(moon, 0.25, {TextTransparency = 1})
-		task.wait(0.3)
-		if self.bannerToken == token then holder.Visible = false end
+		task.wait(0.35)
+		if self.bannerToken ~= token then return false end
+		holder.Visible = false
+		return true
+	end
+
+	local descriptions = {
+		Automation = "auto pickups, auto items, and auto escapes",
+		Esp = "see twisteds, players, items, and machines",
+		Teleport = "teleport to machines, elevators, and items",
+		Player = "stamina, ability range, speed, and noclip",
+		Machine = "skillchecks and gigi machine tools",
+		Map = "fullbright and lighting options",
+		Fun = "spin, jump power, and fov changer",
+		Settings = "move and resize the gui and its button",
+	}
+	local description = descriptions[name] or ("everything for " .. tostring(name) .. " is in here")
+
+	task.spawn(function()
+		-- 1) astro says which tab you opened (blue -> dark blue)
+		local ok = runPhase("this is the " .. tostring(name) .. " tab", "rbxassetid://121374428235477",
+			Color3.fromRGB(45,120,235), Color3.fromRGB(10,30,110))
+		if not ok then return end
+		task.wait(0.15)
+		-- 2) then the second image describes the tab (purple -> dark purple)
+		runPhase(description, "rbxassetid://18358868097",
+			Color3.fromRGB(170,90,235), Color3.fromRGB(60,15,110))
 	end)
 end
 
@@ -1175,6 +1230,39 @@ function Looey:Center()
 	self.shadow.Position = cpos
 end
 
+-- cancels any tab banner that is playing; with animate it leaves a copy behind that fades out fast
+function Looey:HideTabBanner(animate)
+	self.bannerToken = (self.bannerToken or 0) + 1
+	local holder = self.tabBanner
+	if not holder or not holder.Parent or not holder.Visible then return end
+
+	if animate and self.gui and self.gui.Parent then
+		pcall(function()
+			local ghost = holder:Clone()
+			ghost.AnchorPoint = Vector2.new(0,0)
+			ghost.Position = UDim2.fromOffset(
+				holder.AbsolutePosition.X - self.gui.AbsolutePosition.X,
+				holder.AbsolutePosition.Y - self.gui.AbsolutePosition.Y
+			)
+			ghost.ZIndex = 200
+			ghost.Parent = self.gui
+			for _, d in ipairs(ghost:GetDescendants()) do
+				if d:IsA("GuiObject") then d.ZIndex = 200 + d.ZIndex end
+				if d:IsA("TextLabel") then
+					tw(d, 0.2, {TextTransparency = 1})
+				elseif d:IsA("ImageLabel") then
+					tw(d, 0.2, {ImageTransparency = 1})
+				elseif d:IsA("Frame") then
+					tw(d, 0.2, {BackgroundTransparency = 1})
+				end
+			end
+			task.delay(0.25, function() ghost:Destroy() end)
+		end)
+	end
+
+	holder.Visible = false
+end
+
 function Looey:SetVisible(v)
 	if not self.gui or not self.gui.Parent then return end
 	if v then
@@ -1191,6 +1279,7 @@ function Looey:SetVisible(v)
 		tw(self.main, 0.3, {Size = UDim2.fromOffset(self.W, self.H)}, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 	else
 		self.hidden = true
+		self:HideTabBanner(true)
 		self.main.Visible = false
 		self.shadow.Visible = false
 	end
@@ -3655,6 +3744,19 @@ SettingsTab:CreateDropdown({
     Callback = function(opt)
         Window:SetDevice(opt)
     end,
+})
+
+SettingsTab:CreateSection("Tab Banner")
+
+SettingsTab:CreateToggle({
+    Name = "Show Tab Banner",
+    CurrentValue = AstroCfg.data.tabBanner ~= false,
+    Flag = "TabBannerToggle",
+    Callback = function(v)
+        AstroCfg.data.tabBanner = v and true or false
+        AstroCfg.save()
+        if not v then Window:HideTabBanner(true) end
+    end
 })
 
 SettingsTab:CreateSection("Launcher Button")
