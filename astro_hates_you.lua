@@ -152,10 +152,10 @@ function Tab:_n()
 	return self.n
 end
 
-function Tab:CreateSection(name)
+function Tab:CreateSection(name, keepCase)
 	local f = new("Frame", {Size = UDim2.new(1,0,0,24), BackgroundTransparency = 1, LayoutOrder = self:_n(), Parent = self.page})
 	new("TextLabel", {
-		Text = string.upper(name or "section"), Font = fontBold, TextSize = 11, TextColor3 = c.gold,
+		Text = keepCase and (name or "section") or string.upper(name or "section"), Font = fontBold, TextSize = 11, TextColor3 = c.gold,
 		BackgroundTransparency = 1, Size = UDim2.new(1,0,0,16),
 		TextXAlignment = Enum.TextXAlignment.Left, Parent = f,
 	})
@@ -860,7 +860,7 @@ function Looey:intro(done)
 		SortOrder = Enum.SortOrder.LayoutOrder, Parent = holder,
 	})
 
-	local lines = {"Welcome To...", "astro hates you", "astro"}
+	local lines = {"mm astro", "astro hates you", "astro"}
 
 	task.spawn(function()
 		for i, text in ipairs(lines) do
@@ -1331,85 +1331,6 @@ local function toggleNoclip(state)
         end
     end
 end
-
-local MainTab = Window:CreateTab("Main", 82594118269653)
-
-local speedValue, speedEnabled = 16, false
-local tpWalkSpeed, tpWalkEnabled = 0.1, false
-
-MainTab:CreateSlider({
-    Name = "Speed",
-    Range = {16, 30},
-    Increment = 1,
-    CurrentValue = 16,
-    Flag = "PlayerSpeed",
-    Toggle = true,
-    Callback = function(v, on)
-        speedValue = v
-        speedEnabled = on
-        if Humanoid then
-            Humanoid.WalkSpeed = on and v or 16
-        end
-    end,
-})
-
-MainTab:CreateToggle({
-    Name = "Noclip",
-    CurrentValue = false,
-    Flag = "NoclipToggle",
-    Callback = function(Value)
-        if Value then
-            applyNoclip()
-            if not NoclipConnection then
-                NoclipConnection = RunService.Stepped:Connect(function()
-                    local character = LocalPlayer.Character
-                    if character then
-                        for _, part in ipairs(character:GetDescendants()) do
-                            if part:IsA("BasePart") then
-                                part.CanCollide = false
-                            end
-                        end
-                    end
-                end)
-            end
-        else
-            if NoclipConnection then
-                NoclipConnection:Disconnect()
-                NoclipConnection = nil
-            end
-            local character = LocalPlayer.Character
-            if character then
-                for _, part in ipairs(character:GetDescendants()) do
-                    if part:IsA("BasePart") then
-                        part.CanCollide = true
-                    end
-                end
-            end
-        end
-    end,
-})
-
-MainTab:CreateSlider({
-    Name = "Tpwalk Speed",
-    Range = {0.1, 0.3},
-    Increment = 0.05,
-    CurrentValue = 0.1,
-    Flag = "TPWalkSpeed",
-    Toggle = true,
-    Callback = function(v, on)
-        tpWalkSpeed = v
-        tpWalkEnabled = on
-    end,
-})
-
-RunService.RenderStepped:Connect(function(delta)
-    if speedEnabled and Humanoid and Humanoid.WalkSpeed ~= speedValue then
-        Humanoid.WalkSpeed = speedValue
-    end
-    if tpWalkEnabled and Character and HumanoidRootPart and Humanoid and Humanoid.MoveDirection.Magnitude > 0 then
-        HumanoidRootPart.CFrame = HumanoidRootPart.CFrame + (Humanoid.MoveDirection * tpWalkSpeed * delta * 60)
-    end
-end)
 
 local AutomationTab = Window:CreateTab("Automation", 71680025256265)
 
@@ -3366,6 +3287,85 @@ task.spawn(function()
     end
 end)
 
+PlayerTab:CreateSection("movement", true)
+
+local speedValue, speedEnabled = 16, false
+local tpWalkSpeed, tpWalkEnabled = 0.1, false
+
+PlayerTab:CreateSlider({
+    Name = "Speed",
+    Range = {16, 30},
+    Increment = 1,
+    CurrentValue = 16,
+    Flag = "PlayerSpeed",
+    Toggle = true,
+    Callback = function(v, on)
+        speedValue = v
+        speedEnabled = on
+        if Humanoid then
+            Humanoid.WalkSpeed = on and v or 16
+        end
+    end,
+})
+
+PlayerTab:CreateToggle({
+    Name = "Noclip",
+    CurrentValue = false,
+    Flag = "NoclipToggle",
+    Callback = function(Value)
+        if Value then
+            applyNoclip()
+            if not NoclipConnection then
+                NoclipConnection = RunService.Stepped:Connect(function()
+                    local character = LocalPlayer.Character
+                    if character then
+                        for _, part in ipairs(character:GetDescendants()) do
+                            if part:IsA("BasePart") then
+                                part.CanCollide = false
+                            end
+                        end
+                    end
+                end)
+            end
+        else
+            if NoclipConnection then
+                NoclipConnection:Disconnect()
+                NoclipConnection = nil
+            end
+            local character = LocalPlayer.Character
+            if character then
+                for _, part in ipairs(character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = true
+                    end
+                end
+            end
+        end
+    end,
+})
+
+PlayerTab:CreateSlider({
+    Name = "Tpwalk Speed",
+    Range = {0.1, 0.3},
+    Increment = 0.05,
+    CurrentValue = 0.1,
+    Flag = "TPWalkSpeed",
+    Toggle = true,
+    Callback = function(v, on)
+        tpWalkSpeed = v
+        tpWalkEnabled = on
+    end,
+})
+
+RunService.RenderStepped:Connect(function(delta)
+    if speedEnabled and Humanoid and Humanoid.WalkSpeed ~= speedValue then
+        Humanoid.WalkSpeed = speedValue
+    end
+    if tpWalkEnabled and Character and HumanoidRootPart and Humanoid and Humanoid.MoveDirection.Magnitude > 0 then
+        HumanoidRootPart.CFrame = HumanoidRootPart.CFrame + (Humanoid.MoveDirection * tpWalkSpeed * delta * 60)
+    end
+end)
+
 local MachineTab = Window:CreateTab("Machine", 120555476154580)
 MachineTab:CreateToggle({ Name = "Instant Skillcheck", CurrentValue = false, Flag = "InstantSkillcheck", Callback = function(v) getgenv().scinstant = v end })
 
@@ -3407,136 +3407,6 @@ MachineTab:CreateButton({
         end)
     end,
 })
-
-local autoSwimmyEnabled = false
-MachineTab:CreateToggle({
-    Name = "Auto Swimmy Barnaby Machine (LOBBY)",
-    CurrentValue = false,
-    Flag = "AutoSwimmyToggle",
-    Callback = function(v)
-        autoSwimmyEnabled = v
-    end
-})
-
-task.spawn(function()
-    pcall(function()
-        local sharedData = ReplicatedStorage:FindFirstChild("SharedData")
-        if not sharedData then return end
-        local arcadeGames = sharedData:FindFirstChild("ArcadeGames")
-        if not arcadeGames then return end
-        local barnabymodule = require(arcadeGames:WaitForChild("SwimmyBarnaby"))
-        local pg = LocalPlayer:WaitForChild("PlayerGui")
-
-        local function barnabify(session)
-            if not autoSwimmyEnabled then return end
-            session.forcekill = false
-
-            if type(session.tick) == "function" or (getmetatable(session) and session.tick) then
-                local oldtick = session.tick
-                session.tick = function(self, ...)
-                    if not autoSwimmyEnabled then return oldtick(self, ...) end
-                    if self.forcekill then return -1 end
-                    local result = oldtick(self, ...)
-                    return (result == -1) and 0 or result
-                end
-            end
-
-            if type(session.Jump) == "function" then session.Jump = function() end end
-            if session.Fish and type(session.Fish.Jump) == "function" then session.Fish.Jump = function() end end
-
-            pcall(function()
-                local uisource = arcadeGames.SwimmyBarnaby.ClientUI
-                local customui = uisource:Clone()
-                customui.Name = "end me"
-                if customui:IsA("ScreenGui") then customui.DisplayOrder = 999999999 end
-                customui.Parent = pg
-
-                local bottom = customui.Bottom
-                local mobile = bottom.Mobile
-                local unpressed = mobile.Unpressed
-                local textlabel = unpressed.TextLabel
-
-                textlabel.Text = "END GAME"
-                bottom.Visible = true
-                bottom.ZIndex = 9e9
-
-                mobile.Activated:Connect(function()
-                    session.forcekill = true
-                    customui:Destroy()
-                end)
-            end)
-
-            if session.Fish then
-                pcall(function() session.Fish:SetGravity(0) end)
-                if session.Fish.Part then
-                    task.spawn(function()
-                        while session.SessionId and not session.forcekill and autoSwimmyEnabled do
-                            pcall(function()
-                                local cf = session.Fish.Part:GetPivot()
-                                session.Fish.Part:PivotTo(CFrame.new(cf.X, 0, cf.Z))
-                            end)
-                            task.wait()
-                        end
-                    end)
-                end
-            end
-
-            task.spawn(function()
-                while session.SessionId and not session.forcekill and autoSwimmyEnabled do
-                    pcall(function()
-                        if session.Parent then
-                            for _, child in ipairs(session.Parent:GetChildren()) do
-                                if child:IsA("Model") and (child.Name:find("Obstacle") or child:FindFirstChild("BendySeaweed")) then
-                                    for _, descendant in ipairs(child:GetDescendants()) do
-                                        if descendant:IsA("BasePart") then descendant:Destroy() end
-                                    end
-                                end
-                            end
-                        end
-                    end)
-                    task.wait(0.3)
-                end
-            end)
-        end
-
-        local oldstart = barnabymodule.Start
-        barnabymodule.Start = function(self, creators)
-            if autoSwimmyEnabled and creators and creators.Obstacle then
-                local oldvein = creators.Obstacle
-                creators.Obstacle = function(...)
-                    local vein = oldvein(...)
-                    if vein and vein.Model then
-                        pcall(function()
-                            for _, part in ipairs(vein.Model:GetDescendants()) do
-                                if part:IsA("BasePart") then
-                                    part.CanCollide = false
-                                    part.CanTouch = false
-                                end
-                            end
-                        end)
-                    end
-                    return vein
-                end
-            end
-            local res = oldstart(self, creators)
-            if autoSwimmyEnabled then barnabify(self) end
-            return res
-        end
-
-        task.spawn(function()
-            while true do
-                if autoSwimmyEnabled then
-                    for _, v in ipairs(getgc(true)) do
-                        if type(v) == "table" and rawget(v, "GAME_CONFIG") and rawget(v, "SessionId") then
-                            barnabify(v)
-                        end
-                    end
-                end
-                task.wait(2.5)
-            end
-        end)
-    end)
-end)
 
 task.spawn(function()
     getgenv().scinstant = false
@@ -3681,58 +3551,11 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
-FunTab:CreateButton({
-    Name = "HardCore Mode",
-    Callback = function()
-        pcall(function()
-            Lighting.FogColor = Color3.fromRGB(0, 0, 0)
-            Lighting.FogStart = 0
-            Lighting.FogEnd = 50
-            Lighting.Brightness = 0
-
-            pcall(function()
-                for _, sound in ipairs(workspace:GetDescendants()) do
-                    if sound:IsA("Sound") then sound.Volume = 0 end
-                end
-                game:GetService("SoundService").Volume = 0
-            end)
-
-            task.spawn(function()
-                while true do
-                    pcall(function()
-                        local currentRoom = Workspace:FindFirstChild("CurrentRoom")
-                        if currentRoom and currentRoom:FindFirstChild("Monsters") then
-                            currentRoom.Monsters:ClearAllChildren()
-                        end
-
-                        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-                            LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = 22
-                            speedValue = 22
-                        end
-                    end)
-                    task.wait(0.5)
-                end
-            end)
-
-            Rayfield:Notify({ Title = "Good Luck. :)", Content = "", Duration = 2 })
-        end)
-    end
-})
-
 FunTab:CreateButton({ Name = "Kill Yourself", Callback = function()
     if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
         LocalPlayer.Character.Humanoid.Health = 0
     end
 end })
-
-FunTab:CreateButton({
-    Name = "YouTube Music",
-    Callback = function()
-        pcall(function()
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/zxcursedsocute/Youtube-Music-Player-Free/refs/heads/main/loader"))()
-        end)
-    end,
-})
 
 local SettingsTab = Window:CreateTab("Settings", 85280212335165)
 
