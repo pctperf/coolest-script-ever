@@ -3448,6 +3448,43 @@ PlayerTab:CreateToggle({
 
                 local serversidesprint = nil
 
+                -- when stamina hits 0 you stop running, and pressing sprint again keeps you running
+                local staminaObj, lastStaminaSearch = nil, 0
+                local runAtZero = false
+
+                local function getStamina()
+                    if staminaObj and staminaObj.Parent then return staminaObj.Value end
+                    staminaObj = nil
+                    if tick() - lastStaminaSearch > 2 then
+                        lastStaminaSearch = tick()
+                        local roots = {localcharacter:FindFirstChild("Stats"), localcharacter}
+                        for _, root in ipairs(roots) do
+                            for _, d in ipairs(root:GetDescendants()) do
+                                if (d:IsA("NumberValue") or d:IsA("IntValue")) and d.Name:lower():find("stamina") then
+                                    staminaObj = d
+                                    return d.Value
+                                end
+                            end
+                        end
+                        for _, child in ipairs(plr:GetChildren()) do
+                            if (child:IsA("NumberValue") or child:IsA("IntValue")) and child.Name:lower():find("stamina") then
+                                staminaObj = child
+                                return child.Value
+                            end
+                        end
+                    end
+                    for _, holder in ipairs({plr, localcharacter}) do
+                        local attr = holder:GetAttribute("Stamina")
+                        if type(attr) == "number" then return attr end
+                    end
+                    return nil
+                end
+
+                local function outOfStamina()
+                    local s = getStamina()
+                    return s ~= nil and s <= 0
+                end
+
                 local function applySprintSpeed()
                     if updateEnabled then
                         local maxSpeed = plr:GetAttribute("KM_MAX_PLAYER_SPEED")
@@ -3489,6 +3526,7 @@ PlayerTab:CreateToggle({
 
                 local conn2 = sprintevent.OnClientEvent:Connect(function(arg1)
                     serversidesprint = false
+                    if outOfStamina() and not runAtZero then return end
                     enablelooprunspeed()
                 end)
                 table.insert(infStaminaConnections, conn2)
@@ -3505,6 +3543,7 @@ PlayerTab:CreateToggle({
                             sprintevent:FireServer(true)
                             serversidesprint = true
                             screengui.SprintIcon.Visible = false
+                            runAtZero = outOfStamina()
                             enablelooprunspeed()
                             return
                         end
@@ -3523,6 +3562,7 @@ PlayerTab:CreateToggle({
                     if processevent then return end
                     if inputobj.KeyCode == Enum.KeyCode.ButtonR1 or inputobj.KeyCode == Enum.KeyCode.LeftShift then
                         if inputobj.KeyCode == Enum.KeyCode.ButtonR1 and isprocessed then return end
+                        runAtZero = outOfStamina()
                         enablelooprunspeed()
                         serversidesprint = true
                         if inputobj.KeyCode == Enum.KeyCode.ButtonR1 then isprocessed = true end
@@ -3541,6 +3581,19 @@ PlayerTab:CreateToggle({
                     end
                 end)
                 table.insert(infStaminaConnections, conn5)
+
+                local conn6 = game:GetService("RunService").Heartbeat:Connect(function()
+                    local s = getStamina()
+                    if s == nil then return end
+                    if s > 0 then
+                        runAtZero = false
+                    elseif updateEnabled and not runAtZero then
+                        -- stamina ran out: stop running (press sprint again to keep going)
+                        disablelooprunspeed()
+                        sprintevent:FireServer(false)
+                    end
+                end)
+                table.insert(infStaminaConnections, conn6)
             end)
         else
             for _, conn in ipairs(infStaminaConnections) do
