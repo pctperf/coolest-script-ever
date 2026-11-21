@@ -2307,7 +2307,8 @@ local itemMap = {
     Pop = "Pop", PopBottle = "Pop Bottle", JumperCable = "Jumper Cable", Stopwatch = "Stopwatch",
     ChristmasCookie = "Christmas Cookie", DandyEasterEggs = "Dandy Easter Eggs", Pumpkin = "Pumpkins",
     FakeCapsule = "Fake Capsule", Ornament = "Ornament", Basket = "Basket", DandCorn = "DandCorn",
-    GlitterGlue = "Glitter Glue", Valve = "Valve", AlarmClock = "Alarm Clock", ExtraHeart = "Extra Heart"
+    GlitterGlue = "Glitter Glue", Valve = "Valve", AlarmClock = "Alarm Clock", ExtraHeart = "Extra Heart",
+    Ichorling = "Ichorling"
 }
 
 local cols = {
@@ -2328,12 +2329,44 @@ local cols = {
     ["Fake Capsule"] = Color3.fromRGB(255, 255, 0), ["DandCorn"] = Color3.fromRGB(255, 255, 0),
     ["Glitter Glue"] = Color3.fromRGB(255, 105, 230), ["Valve"] = Color3.fromRGB(255, 170, 40),
     ["Alarm Clock"] = Color3.fromRGB(255, 215, 90),
-    ["Extra Heart"] = Color3.fromRGB(255, 60, 90)
+    ["Extra Heart"] = Color3.fromRGB(255, 60, 90),
+    ["Ichorling"] = Color3.fromRGB(200, 60, 255)
 }
+
+-- an "Ichorling" only shows in Item ESP when it is not a humanoid and its health is 3
+-- (health is read from a Health attribute, or a Health / HP number value inside it)
+local watchedIchorlings = setmetatable({}, {__mode = "k"})
+
+local function getIchorlingHealth(obj)
+    for _, attrName in ipairs({"Health", "health", "HP"}) do
+        local attr = obj:GetAttribute(attrName)
+        if type(attr) == "number" then return attr end
+    end
+    for _, valueName in ipairs({"Health", "HP"}) do
+        local v = obj:FindFirstChild(valueName, true)
+        if v and (v:IsA("NumberValue") or v:IsA("IntValue")) then return v.Value end
+    end
+    return nil
+end
+
+local function isTrackedIchorling(obj)
+    if obj.Name ~= "Ichorling" then return true end
+    if obj:IsA("Humanoid") or obj:FindFirstChildWhichIsA("Humanoid", true) then return false end
+    return getIchorlingHealth(obj) == 3
+end
 
 local function applyItemESP(obj)
     if not obj or not itemMap[obj.Name] then return end
     if not isRealValveItem(obj) then return end
+
+    if obj.Name == "Ichorling" then
+        watchedIchorlings[obj] = true
+        if not isTrackedIchorling(obj) then
+            local stale = obj:FindFirstChild("ESP_Added")
+            if stale then stale:Destroy() end
+            return
+        end
+    end
 
     if itemBlacklist[obj.Name] then
         local added = obj:FindFirstChild("ESP_Added")
@@ -2445,6 +2478,10 @@ local function applyItemESP(obj)
         task.spawn(function()
             while itemEspEnabled and obj and obj.Parent and hi and txt do
                 local t = tick()
+                if obj.Name == "Ichorling" and not isTrackedIchorling(obj) then
+                    tagFolder:Destroy()
+                    break
+                end
                 if capsuleList1[mLower] then
                     local alpha = (t - rbStart) / 1.0
                     if alpha >= 1 then
@@ -2537,6 +2574,20 @@ EspTab:CreateToggle({
                 if itemEspEnabled then
                     task.wait(0.1)
                     applyItemESP(o)
+                end
+            end)
+
+            -- ichorlings change health over time, so re-check the ones we've seen once a second
+            task.spawn(function()
+                while itemEspEnabled do
+                    for o in pairs(watchedIchorlings) do
+                        if not o.Parent then
+                            watchedIchorlings[o] = nil
+                        elseif not o:FindFirstChild("ESP_Added") then
+                            applyItemESP(o)
+                        end
+                    end
+                    task.wait(1)
                 end
             end)
         else
@@ -3034,7 +3085,7 @@ local itemBlacklistOptions = {
     "Bandage", "SpeedCandy", "StealthCandy", "StaminaCandy", "ProteinBar", "Tape",
     "SmokeBomb", "Instructions", "AirHorn", "Gumball", "PopBottle", "Pop", "Chocolate",
     "ChocolateBox", "DandyEasterEggs", "ChristmasCookie", "FakeCapsule", "BonBon",
-    "ResearchCapsule", "EjectButton", "Stopwatch", "Ornament", "Pumpkins", "Basket", "GlitterGlue", "Valve", "AlarmClock", "ExtraHeart"
+    "ResearchCapsule", "EjectButton", "Stopwatch", "Ornament", "Pumpkins", "Basket", "GlitterGlue", "Valve", "AlarmClock", "ExtraHeart", "Ichorling"
 }
 
 EspTab:CreateDropdown({
