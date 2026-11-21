@@ -2181,7 +2181,7 @@ EspTab:CreateToggle({
             local owner = Players:GetPlayerFromCharacter(char)
             if not owner then
                 local lowerName = char.Name:lower()
-                if lowerName:find("dandy") or lowerName:find("dioda") or lowerName:find("dessa") then return end
+                if lowerName:find("dandy") or lowerName:find("dioda") or lowerName:find("dessa") or lowerName:find("ichorling") then return end
             end
             local displayName = owner and owner.Name or char.Name
             if playerBlacklist[displayName] then return end
