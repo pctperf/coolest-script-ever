@@ -1392,7 +1392,7 @@ local TwistedMonsterNames = {
     ["AstroMonster"] = true, ["SproutMonster"] = true, ["BobetteMonster"] = true, ["BassieMonster"] = true,
     ["DyleMonster"] = true, ["DandyMonster"] = true, ["GourdyMonster"] = true, ["TeaganMonster"] = true,
     ["RodgerMonster"] = true, ["RazzleDazzleMonster"] = true, ["ConnieMonster"] = true, ["WaxwellMonster"] = true,
-    ["DiodaMonster"] = true, ["DessaMonster"] = true
+    ["DiodaMonster"] = true, ["DessaMonster"] = true, ["Dioda"] = true, ["Dessa"] = true
 }
 
 local function isTwistedNearby(targetPos, maxDist)
@@ -1438,22 +1438,22 @@ local function canInteractWithPosition(pos)
     return true
 end
 
--- "Valve" is also the name of parts on the machines, so only count one as the item when it can be
--- picked up (has a prompt) and isn't sitting inside a generator or machine model
+-- "Valve" is also the name of parts on the machines, so only count one as the item when it has a
+-- pickup prompt (its text says pick up, grab, take or collect, like the other items)
 local function isRealValveItem(obj)
     if obj.Name ~= "Valve" then return true end
-    if not obj:FindFirstChildWhichIsA("ProximityPrompt", true) then return false end
-    local parent = obj.Parent
-    while parent and parent ~= workspace do
-        if parent:IsA("Model") then
-            local n = parent.Name:lower()
-            if n:find("generator") or n:find("machine") or n:find("dualgen") or n:find("trickortreatgen") then
-                return false
-            end
-        end
-        parent = parent.Parent
+    local prompts = {}
+    if obj:IsA("ProximityPrompt") then table.insert(prompts, obj) end
+    for _, d in ipairs(obj:GetDescendants()) do
+        if d:IsA("ProximityPrompt") then table.insert(prompts, d) end
     end
-    return true
+    for _, prompt in ipairs(prompts) do
+        local text = (prompt.ActionText .. " " .. prompt.ObjectText):lower()
+        if text:find("pick") or text:find("grab") or text:find("take") or text:find("collect") then
+            return true
+        end
+    end
+    return false
 end
 
 local function teleportTo(name, isExact)
@@ -1888,7 +1888,7 @@ EspTab:CreateToggle({
         local RareList = { ["GigiMonster"] = true, ["ScrapsMonster"] = true, ["GoobMonster"] = true, ["WaxwellMonster"] = true, ["GlistenMonster"] = true, ["FlutterMonster"] = true, ["EclipseMonster"] = true, ["CocoaMonster"] = true, ["CoalMonster"] = true, ["SquirmMonster"] = true, ["BlottMonster"] = true }
         local BlotHandsList = { ["BlotHand"] = true, ["BlotHand_L"] = true, ["BlotHand_R"] = true }
         local MainList = { ["ShellyMonster"] = true, ["AstroMonster"] = true, ["PebbleMonster"] = true, ["VeeMonster"] = true, ["SproutMonster"] = true, ["BassieMonster"] = true, ["BobetteMonster"] = true, ["GourdyMonster"] = true }
-        local LethalList = { ["DandyMonster"] = true, ["DyleMonster"] = true, ["DiodaMonster"] = true, ["DessaMonster"] = true }
+        local LethalList = { ["DandyMonster"] = true, ["DyleMonster"] = true, ["DiodaMonster"] = true, ["DessaMonster"] = true, ["Dioda"] = true, ["Dessa"] = true }
 
         local EasterEventList = { ["CocoaMonster"] = true, ["BassieMonster"] = true, ["FlyteMonster"] = true, ["EggsonMonster"] = true }
         local EasterColors = {Color3.fromRGB(255, 255, 153), Color3.fromRGB(255, 153, 204)}
@@ -1991,7 +1991,7 @@ EspTab:CreateToggle({
                     local fadeColor = Color3.fromRGB(170, 120, 230):Lerp(Color3.fromRGB(10, 25, 110), fade)
                     highlight.FillColor = fadeColor
                     -- dioda and dessa also get a rainbow outline (same color as their nametag)
-                    if model.Name == "DiodaMonster" or model.Name == "DessaMonster" then
+                    if model.Name == "DiodaMonster" or model.Name == "DessaMonster" or model.Name == "Dioda" or model.Name == "Dessa" then
                         highlight.OutlineColor = targetColor
                     end
                     textLabel.TextColor3 = targetColor
@@ -2179,7 +2179,10 @@ EspTab:CreateToggle({
             if not humanoid then return end
 
             local owner = Players:GetPlayerFromCharacter(char)
-            if not owner and char.Name:lower():find("dandy") then return end
+            if not owner then
+                local lowerName = char.Name:lower()
+                if lowerName:find("dandy") or lowerName:find("dioda") or lowerName:find("dessa") then return end
+            end
             local displayName = owner and owner.Name or char.Name
             if playerBlacklist[displayName] then return end
 
@@ -2304,7 +2307,7 @@ local itemMap = {
     Pop = "Pop", PopBottle = "Pop Bottle", JumperCable = "Jumper Cable", Stopwatch = "Stopwatch",
     ChristmasCookie = "Christmas Cookie", DandyEasterEggs = "Dandy Easter Eggs", Pumpkin = "Pumpkins",
     FakeCapsule = "Fake Capsule", Ornament = "Ornament", Basket = "Basket", DandCorn = "DandCorn",
-    GlitterGlue = "Glitter Glue", Valve = "Valve", AlarmClock = "Alarm Clock"
+    GlitterGlue = "Glitter Glue", Valve = "Valve", AlarmClock = "Alarm Clock", ExtraHeart = "Extra Heart"
 }
 
 local cols = {
@@ -2324,7 +2327,8 @@ local cols = {
     ["Ornament"] = Color3.fromRGB(132, 238, 178), ["Basket"] = Color3.fromRGB(255, 105, 180),
     ["Fake Capsule"] = Color3.fromRGB(255, 255, 0), ["DandCorn"] = Color3.fromRGB(255, 255, 0),
     ["Glitter Glue"] = Color3.fromRGB(255, 105, 230), ["Valve"] = Color3.fromRGB(255, 170, 40),
-    ["Alarm Clock"] = Color3.fromRGB(255, 215, 90)
+    ["Alarm Clock"] = Color3.fromRGB(255, 215, 90),
+    ["Extra Heart"] = Color3.fromRGB(255, 60, 90)
 }
 
 local function applyItemESP(obj)
@@ -2344,6 +2348,18 @@ local function applyItemESP(obj)
         for _, descendant in ipairs(obj:GetDescendants()) do
             if descendant.Name == "Tape" and (descendant:IsA("BillboardGui") or descendant:IsA("SurfaceGui") or descendant:IsA("TextLabel")) then
                 descendant:Destroy()
+            end
+        end
+    end
+
+    if obj.Name == "AlarmClock" then
+        -- the clock can have a second "AlarmClock" nested inside it, which gave it two name tags:
+        -- only the outermost one gets the ESP, and any tag already put on an inner one is removed
+        if obj:FindFirstAncestor("AlarmClock") then return end
+        for _, descendant in ipairs(obj:GetDescendants()) do
+            if descendant.Name == "AlarmClock" then
+                local inner = descendant:FindFirstChild("ESP_Added")
+                if inner then inner:Destroy() end
             end
         end
     end
@@ -2462,6 +2478,13 @@ local function applyItemESP(obj)
                 elseif obj.Name == "AlarmClock" then
                     -- the name text cycles through the rainbow (the highlight keeps its own color)
                     txt.TextColor3 = Color3.fromHSV((t * 0.4) % 1, 1, 1)
+                elseif obj.Name == "ExtraHeart" then
+                    -- the name text and the highlight fade blue -> green -> cyan -> back to blue
+                    local heartColors = {Color3.fromRGB(40,120,255), Color3.fromRGB(50,255,100), Color3.fromRGB(0,255,255)}
+                    local pos = (t * 0.6) % #heartColors
+                    local i = math.floor(pos)
+                    local heartColor = heartColors[i + 1]:Lerp(heartColors[(i + 1) % #heartColors + 1], pos - i)
+                    hi.FillColor = heartColor; hi.OutlineColor = heartColor; txt.TextColor3 = heartColor
                 else
                     local c1, c2 = nil, nil
                     if obj.Name == "HealthKit" or obj.Name == "Bandage" then
@@ -2492,7 +2515,7 @@ local function applyItemESP(obj)
                     hi.FillColor = fadeColor
                     hi.OutlineColor = fadeColor
                 end
-                task.wait((mLower ~= "" or obj.Name == "AlarmClock") and 0.05 or 0.15)
+                task.wait((mLower ~= "" or obj.Name == "AlarmClock" or obj.Name == "ExtraHeart") and 0.05 or 0.15)
             end
         end)
     end
@@ -3011,7 +3034,7 @@ local itemBlacklistOptions = {
     "Bandage", "SpeedCandy", "StealthCandy", "StaminaCandy", "ProteinBar", "Tape",
     "SmokeBomb", "Instructions", "AirHorn", "Gumball", "PopBottle", "Pop", "Chocolate",
     "ChocolateBox", "DandyEasterEggs", "ChristmasCookie", "FakeCapsule", "BonBon",
-    "ResearchCapsule", "EjectButton", "Stopwatch", "Ornament", "Pumpkins", "Basket", "GlitterGlue", "Valve", "AlarmClock"
+    "ResearchCapsule", "EjectButton", "Stopwatch", "Ornament", "Pumpkins", "Basket", "GlitterGlue", "Valve", "AlarmClock", "ExtraHeart"
 }
 
 EspTab:CreateDropdown({
@@ -3169,7 +3192,7 @@ TeleportTab:CreateToggle({
 })
 
 TeleportTab:CreateSection("Items Teleport")
-local itemsList = {"AirHorn", "SmokeBomb", "ResearchCapsule", "ProteinBar", "Jawbreaker", "EjectButton", "HealthKit", "Bandage", "Tape", "Instructions", "ExtractionSpeedCandy", "SkillCheckCandy", "StaminaCandy", "StealthCandy", "SpeedCandy", "Gumball", "BonBon", "Chocolate", "ChocolateBox", "Pop", "PopBottle", "JumperCable", "Stopwatch", "ChristmasCookie", "DandyEasterEggs", "Pumpkin", "Ornament", "Basket", "FakeCapsule", "GlitterGlue", "Valve", "AlarmClock"}
+local itemsList = {"AirHorn", "SmokeBomb", "ResearchCapsule", "ProteinBar", "Jawbreaker", "EjectButton", "HealthKit", "Bandage", "Tape", "Instructions", "ExtractionSpeedCandy", "SkillCheckCandy", "StaminaCandy", "StealthCandy", "SpeedCandy", "Gumball", "BonBon", "Chocolate", "ChocolateBox", "Pop", "PopBottle", "JumperCable", "Stopwatch", "ChristmasCookie", "DandyEasterEggs", "Pumpkin", "Ornament", "Basket", "FakeCapsule", "GlitterGlue", "Valve", "AlarmClock", "ExtraHeart"}
 local selectedItem = itemsList[1]
 TeleportTab:CreateDropdown({ Name = "Select Your Item", Options = itemsList, CurrentOption = {itemsList[1]}, Flag = "SelectedItemTp", Callback = function(opt) selectedItem = type(opt) == "table" and opt[1] or opt end })
 TeleportTab:CreateButton({ Name = "Teleport to Selected Item", Callback = function() teleportTo(selectedItem, true) end })
