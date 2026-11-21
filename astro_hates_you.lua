@@ -1680,7 +1680,7 @@ AutomationTab:CreateToggle({
 })
 
 task.spawn(function()
-    local extractionNames = {["ExtractionSpeedCandy"]=true, ["Instructions"]=true, ["BonBon"]=true, ["Jawbreaker"]=true, ["JumperCable"]=true}
+    local extractionNames = {["ExtractionSpeedCandy"]=true, ["Instructions"]=true, ["BonBon"]=true, ["Jawbreaker"]=true, ["JumperCable"]=true, ["Valve"]=true}
     local healNames = {["Bandage"]=true, ["HealthKit"]=true}
     local eventCurrencyNames = {["Pumpkin"]=true, ["Basket"]=true, ["Ornament"]=true, ["Hm"]=true}
 
@@ -2281,7 +2281,7 @@ local itemMap = {
     Pop = "Pop", PopBottle = "Pop Bottle", JumperCable = "Jumper Cable", Stopwatch = "Stopwatch",
     ChristmasCookie = "Christmas Cookie", DandyEasterEggs = "Dandy Easter Eggs", Pumpkin = "Pumpkins",
     FakeCapsule = "Fake Capsule", Ornament = "Ornament", Basket = "Basket", DandCorn = "DandCorn",
-    GlitterGlue = "Glitter Glue"
+    GlitterGlue = "Glitter Glue", Valve = "Valve"
 }
 
 local cols = {
@@ -2300,7 +2300,7 @@ local cols = {
     ["Dandy Easter Eggs"] = Color3.fromRGB(255, 255, 0), ["Pumpkins"] = Color3.fromRGB(255, 140, 0),
     ["Ornament"] = Color3.fromRGB(132, 238, 178), ["Basket"] = Color3.fromRGB(255, 105, 180),
     ["Fake Capsule"] = Color3.fromRGB(255, 255, 0), ["DandCorn"] = Color3.fromRGB(255, 255, 0),
-    ["Glitter Glue"] = Color3.fromRGB(255, 105, 230)
+    ["Glitter Glue"] = Color3.fromRGB(255, 105, 230), ["Valve"] = Color3.fromRGB(255, 170, 40)
 }
 
 local function applyItemESP(obj)
@@ -2983,7 +2983,7 @@ local itemBlacklistOptions = {
     "Bandage", "SpeedCandy", "StealthCandy", "StaminaCandy", "ProteinBar", "Tape",
     "SmokeBomb", "Instructions", "AirHorn", "Gumball", "PopBottle", "Pop", "Chocolate",
     "ChocolateBox", "DandyEasterEggs", "ChristmasCookie", "FakeCapsule", "BonBon",
-    "ResearchCapsule", "EjectButton", "Stopwatch", "Ornament", "Pumpkins", "Basket", "GlitterGlue"
+    "ResearchCapsule", "EjectButton", "Stopwatch", "Ornament", "Pumpkins", "Basket", "GlitterGlue", "Valve"
 }
 
 EspTab:CreateDropdown({
@@ -3141,7 +3141,7 @@ TeleportTab:CreateToggle({
 })
 
 TeleportTab:CreateSection("Items Teleport")
-local itemsList = {"AirHorn", "SmokeBomb", "ResearchCapsule", "ProteinBar", "Jawbreaker", "EjectButton", "HealthKit", "Bandage", "Tape", "Instructions", "ExtractionSpeedCandy", "SkillCheckCandy", "StaminaCandy", "StealthCandy", "SpeedCandy", "Gumball", "BonBon", "Chocolate", "ChocolateBox", "Pop", "PopBottle", "JumperCable", "Stopwatch", "ChristmasCookie", "DandyEasterEggs", "Pumpkin", "Ornament", "Basket", "FakeCapsule", "GlitterGlue"}
+local itemsList = {"AirHorn", "SmokeBomb", "ResearchCapsule", "ProteinBar", "Jawbreaker", "EjectButton", "HealthKit", "Bandage", "Tape", "Instructions", "ExtractionSpeedCandy", "SkillCheckCandy", "StaminaCandy", "StealthCandy", "SpeedCandy", "Gumball", "BonBon", "Chocolate", "ChocolateBox", "Pop", "PopBottle", "JumperCable", "Stopwatch", "ChristmasCookie", "DandyEasterEggs", "Pumpkin", "Ornament", "Basket", "FakeCapsule", "GlitterGlue", "Valve"}
 local selectedItem = itemsList[1]
 TeleportTab:CreateDropdown({ Name = "Select Your Item", Options = itemsList, CurrentOption = {itemsList[1]}, Flag = "SelectedItemTp", Callback = function(opt) selectedItem = type(opt) == "table" and opt[1] or opt end })
 TeleportTab:CreateButton({ Name = "Teleport to Selected Item", Callback = function() teleportTo(selectedItem, true) end })
