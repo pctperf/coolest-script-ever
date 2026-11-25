@@ -3078,6 +3078,194 @@ EspTab:CreateToggle({
     end
 })
 
+-- ESP extras taken from the Neon Hub script: reanimators, star pillows, ichorlings, ichor flasks
+-- and the Twisted Alert
+EspTab:CreateSection("More ESP")
+
+local function createKeywordEsp(toggleName, flag, color, matches)
+    local enabled = false
+    local tracked = {}
+    local conn = nil
+
+    local function insideTracked(obj)
+        local p = obj.Parent
+        while p and p ~= workspace do
+            if tracked[p] then return true end
+            p = p.Parent
+        end
+        return false
+    end
+
+    local function addEsp(obj)
+        if not enabled or tracked[obj] then return end
+        if not (obj:IsA("Model") or obj:IsA("BasePart")) then return end
+        if not matches(obj) then return end
+        if insideTracked(obj) then return end
+
+        local adornee = obj
+        if obj:IsA("Model") then
+            adornee = obj:FindFirstChild("Head") or obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)
+        end
+        if not adornee then return end
+
+        local hi = Instance.new("Highlight")
+        hi.Name = "AstroExtraESP"
+        hi.Adornee = obj
+        hi.FillColor = color
+        hi.OutlineColor = color
+        hi.FillTransparency = 0.5
+        hi.OutlineTransparency = 0
+        hi.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+        hi.Parent = obj
+
+        local bb = Instance.new("BillboardGui")
+        bb.Name = "AstroExtraESPTag"
+        bb.Adornee = adornee
+        bb.Size = UDim2.new(0, 180, 0, 24)
+        bb.StudsOffset = Vector3.new(0, 2.5, 0)
+        bb.AlwaysOnTop = true
+        bb.Parent = obj
+
+        local label = Instance.new("TextLabel")
+        label.Size = UDim2.fromScale(1, 1)
+        label.BackgroundTransparency = 1
+        label.Text = obj.Name
+        label.TextColor3 = color
+        label.TextStrokeTransparency = 0.4
+        label.Font = Enum.Font.GothamBold
+        label.TextSize = 13
+        label.Parent = bb
+
+        tracked[obj] = {hi = hi, bb = bb}
+    end
+
+    EspTab:CreateToggle({
+        Name = toggleName,
+        CurrentValue = false,
+        Flag = flag,
+        Callback = function(v)
+            enabled = v
+            if v then
+                for _, o in ipairs(workspace:GetDescendants()) do addEsp(o) end
+                if conn then conn:Disconnect() end
+                conn = workspace.DescendantAdded:Connect(function(o)
+                    task.wait(0.1)
+                    addEsp(o)
+                end)
+                task.spawn(function()
+                    while enabled do
+                        for obj, d in pairs(tracked) do
+                            if not obj.Parent then
+                                d.hi:Destroy(); d.bb:Destroy()
+                                tracked[obj] = nil
+                            end
+                        end
+                        task.wait(1)
+                    end
+                end)
+            else
+                if conn then conn:Disconnect(); conn = nil end
+                for _, d in pairs(tracked) do
+                    d.hi:Destroy(); d.bb:Destroy()
+                end
+                tracked = {}
+            end
+        end
+    })
+end
+
+createKeywordEsp("Reanimator ESP", "ReanimatorEspToggle", Color3.fromRGB(80, 255, 160), function(o)
+    local n = o.Name:lower()
+    return n:find("revive", 1, true) ~= nil or n:find("reanimator", 1, true) ~= nil
+end)
+
+createKeywordEsp("Star Pillow ESP", "StarPillowEspToggle", Color3.fromRGB(255, 230, 90), function(o)
+    local n = o.Name:lower()
+    return n:find("starpillow", 1, true) ~= nil or n:find("star pillow", 1, true) ~= nil
+end)
+
+createKeywordEsp("Ichorling ESP", "IchorlingEspToggle", Color3.fromRGB(200, 60, 255), function(o)
+    return o.Name:lower():find("ichorling", 1, true) ~= nil
+end)
+
+createKeywordEsp("Ichor Flask ESP", "IchorFlaskEspToggle", Color3.fromRGB(255, 120, 60), function(o)
+    return o.Name:lower() == "beaker_ichorlow"
+end)
+
+-- Twisted Alert: a red banner and an air horn when a Twisted is within 35 studs
+local TWISTED_ALERT_DISTANCE, TWISTED_ALERT_COOLDOWN = 35, 4
+local twistedAlertEnabled, twistedAlertActive, twistedAlertLast = false, false, 0
+local twistedAlertLabel, twistedAlertSound = nil, nil
+
+local function ensureTwistedAlert()
+    if not twistedAlertLabel or not twistedAlertLabel.Parent then
+        local label = Instance.new("TextLabel")
+        label.Name = "TwistedAlertBanner"
+        label.AnchorPoint = Vector2.new(0.5, 0)
+        label.Position = UDim2.new(0.5, 0, 0, 15)
+        label.Size = UDim2.fromOffset(420, 45)
+        label.BackgroundColor3 = Color3.fromRGB(90, 0, 0)
+        label.BackgroundTransparency = 0.15
+        label.Text = "A TWISTED IS CHASING YOU!!!"
+        label.TextColor3 = Color3.fromRGB(255, 45, 45)
+        label.Font = Enum.Font.GothamBlack
+        label.TextSize = 19
+        label.Visible = false
+        label.ZIndex = 300
+        label.Parent = Window.gui
+        Instance.new("UICorner", label).CornerRadius = UDim.new(0, 8)
+        local stroke = Instance.new("UIStroke", label)
+        stroke.Color = Color3.fromRGB(255, 35, 35)
+        stroke.Thickness = 2
+        twistedAlertLabel = label
+    end
+    if not twistedAlertSound or not twistedAlertSound.Parent then
+        local sound = Instance.new("Sound")
+        sound.Name = "AstroTwistedAlertHorn"
+        sound.SoundId = "rbxassetid://9120386436"
+        sound.Volume = 2
+        sound.Parent = game:GetService("SoundService")
+        twistedAlertSound = sound
+    end
+end
+
+EspTab:CreateToggle({
+    Name = "Twisted Alert",
+    CurrentValue = false,
+    Flag = "TwistedAlertToggle",
+    Callback = function(v)
+        twistedAlertEnabled = v
+        if v then
+            ensureTwistedAlert()
+            task.spawn(function()
+                while twistedAlertEnabled do
+                    local char = LocalPlayer.Character
+                    local root = char and char:FindFirstChild("HumanoidRootPart")
+                    if root and not twistedAlertActive and tick() - twistedAlertLast >= TWISTED_ALERT_COOLDOWN then
+                        if isTwistedNearby(root.Position, TWISTED_ALERT_DISTANCE) then
+                            twistedAlertActive = true
+                            twistedAlertLast = tick()
+                            twistedAlertLabel.Visible = true
+                            twistedAlertSound:Stop()
+                            twistedAlertSound.TimePosition = 0
+                            twistedAlertSound:Play()
+                            task.delay(3, function()
+                                twistedAlertLabel.Visible = false
+                                twistedAlertActive = false
+                            end)
+                        end
+                    end
+                    task.wait(0.5)
+                end
+            end)
+        else
+            if twistedAlertLabel then twistedAlertLabel.Visible = false end
+            if twistedAlertSound then twistedAlertSound:Stop() end
+            twistedAlertActive = false
+        end
+    end
+})
+
 EspTab:CreateSection("Esp Blacklist")
 
 local itemBlacklistOptions = {
