@@ -438,9 +438,9 @@ function Tab:CreateSlider(cfg)
 
 	if cfg.Flag then
 		self.win.flags[cfg.Flag] = {
-			Set = function(v) set(v, false) end,
+			Set = function(v, fire) set(v, fire) end,
 			Get = function() return val end,
-			SetEnabled = function(v) setEnabled(v, false) end,
+			SetEnabled = function(v, fire) setEnabled(v, fire) end,
 			GetEnabled = function() return enabled end,
 		}
 	end
@@ -588,7 +588,7 @@ function Tab:CreateDropdown(cfg)
 	onTap(head, function() toggle() end)
 
 	local resObj = {
-		Set = function(v)
+		Set = function(v, fire)
 			if isMulti then
 				picked = {}
 				if type(v) == "table" then for _, x in ipairs(v) do picked[x] = true end end
@@ -597,6 +597,11 @@ function Tab:CreateDropdown(cfg)
 			end
 			valLbl.Text = getDisplayText()
 			refreshButtons()
+			if fire and cfg.Callback then
+				local arg = picked
+				if not isMulti and type(arg) == "string" then arg = arg end
+				task.spawn(cfg.Callback, arg)
+			end
 		end,
 		Get = function() return picked end,
 		Refresh = function(newOpts)
@@ -608,6 +613,39 @@ function Tab:CreateDropdown(cfg)
 		self.win.flags[cfg.Flag] = resObj
 	end
 	return resObj
+end
+
+function Tab:CreateInput(cfg)
+	cfg = cfg or {}
+	local row = new("Frame", {
+		Size = UDim2.new(1,0,0,38), BackgroundColor3 = c.panel, BackgroundTransparency = 0.1,
+		BorderSizePixel = 0, LayoutOrder = self:_n(), Parent = self.page,
+	})
+	round(row, 8)
+	outline(row, c.gold, 1, 0.78)
+	new("TextLabel", {
+		Text = cfg.Name or "input", Font = fontMed, TextSize = 12, TextColor3 = c.text,
+		BackgroundTransparency = 1, Position = UDim2.new(0,10,0,0), Size = UDim2.new(0.4,-10,1,0),
+		TextXAlignment = Enum.TextXAlignment.Left, Parent = row,
+	})
+	local box = new("TextBox", {
+		Text = cfg.CurrentValue or "", PlaceholderText = cfg.Placeholder or "type here...",
+		Font = font, TextSize = 12, TextColor3 = c.text, PlaceholderColor3 = c.dim,
+		ClearTextOnFocus = false, BackgroundColor3 = c.track, BackgroundTransparency = 0.3, BorderSizePixel = 0,
+		AnchorPoint = Vector2.new(1,0.5), Position = UDim2.new(1,-8,0.5,0), Size = UDim2.new(0.6,-8,0,24),
+		TextXAlignment = Enum.TextXAlignment.Left, ClipsDescendants = true, Parent = row,
+	})
+	round(box, 6)
+	new("UIPadding", {PaddingLeft = UDim.new(0,8), PaddingRight = UDim.new(0,8), Parent = box})
+	box.FocusLost:Connect(function()
+		if cfg.Callback then task.spawn(cfg.Callback, box.Text) end
+	end)
+	local obj = {
+		Set = function(v) box.Text = tostring(v or "") end,
+		Get = function() return box.Text end,
+	}
+	if cfg.Flag then self.win.flags[cfg.Flag] = obj end
+	return obj
 end
 
 function Looey:CreateWindow(cfg)
@@ -2803,283 +2841,6 @@ EspTab:CreateToggle({
     end
 })
 
-EspTab:CreateSection("Ichor Puddles ESP")
-
-local ichorEspEnabled = false
-local ichorDisableNametags = false
-local activeIchorNametags = {}
-local ichorConnection = nil
-
-local function applyIchor(obj)
-    if obj:FindFirstChild("IchorESP") then return end
-    local name = obj.Name
-    if name == "Ichor_Puddle_01" or name == "Ichor_Puddle_02" or name == "Ichor_Puddle_03" or name == "FinnIchorPuddle" then
-        local folder = Instance.new("Folder")
-        folder.Name = "IchorESP"
-        folder.Parent = obj
-
-        local highlight = Instance.new("Highlight", folder)
-        highlight.Adornee = obj
-        highlight.FillColor = Color3.fromRGB(0, 0, 0)
-        highlight.FillTransparency = 0.5
-        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-        highlight.OutlineTransparency = 0
-
-        local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)) or (obj:IsA("BasePart") and obj)
-        if part then
-            local bb = Instance.new("BillboardGui", folder)
-            bb.Name = "Nametag"
-            bb.Adornee = part
-            bb.Size = UDim2.new(0, 200, 0, 50)
-            bb.StudsOffset = Vector3.new(0, 2.5, 0)
-            bb.AlwaysOnTop = true
-            bb.Enabled = not ichorDisableNametags
-
-            table.insert(activeIchorNametags, bb)
-
-            local txt = Instance.new("TextLabel", bb)
-            txt.Size = UDim2.new(1, 0, 1, 0)
-            txt.BackgroundTransparency = 1
-            txt.Text = (name == "FinnIchorPuddle") and "Finn Ichor Puddle" or "Ichor Puddle"
-            txt.TextColor3 = Color3.fromRGB(0, 0, 0)
-            txt.TextSize = 9
-            txt.Font = Enum.Font.FredokaOne
-            txt.TextStrokeTransparency = 0
-            txt.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
-
-            if name == "FinnIchorPuddle" then
-                task.spawn(function()
-                    local c1 = Color3.fromRGB(135, 206, 250)
-                    local c2 = Color3.fromRGB(0, 0, 0)
-                    while ichorEspEnabled and obj and obj.Parent and highlight and txt do
-                        local alpha = math.abs(((tick() / 2) % 2) - 1)
-                        local lerped = c1:Lerp(c2, alpha)
-                        highlight.FillColor = lerped
-                        highlight.OutlineColor = lerped
-                        txt.TextColor3 = lerped
-                        task.wait(0.15)
-                    end
-                end)
-            end
-        end
-    end
-end
-
-EspTab:CreateToggle({
-    Name = "Ichor Puddles Esp",
-    CurrentValue = false,
-    Flag = "IchorPuddlesEspToggle",
-    Callback = function(v)
-        ichorEspEnabled = v
-        if ichorEspEnabled then
-            for _, obj in ipairs(workspace:GetDescendants()) do applyIchor(obj) end
-
-            if ichorConnection then ichorConnection:Disconnect() end
-            ichorConnection = workspace.DescendantAdded:Connect(function(obj)
-                if ichorEspEnabled then
-                    task.wait(0.1)
-                    applyIchor(obj)
-                end
-            end)
-        else
-            if ichorConnection then
-                ichorConnection:Disconnect()
-                ichorConnection = nil
-            end
-            activeIchorNametags = {}
-            for _, obj in ipairs(workspace:GetDescendants()) do
-                local custom = obj:FindFirstChild("IchorESP")
-                if custom then custom:Destroy() end
-            end
-        end
-    end
-})
-
-EspTab:CreateToggle({
-    Name = "Disable Ichor Puddles Nametags",
-    CurrentValue = false,
-    Flag = "IchorDisableNametagsToggle",
-    Callback = function(v)
-        ichorDisableNametags = v
-        for _, tag in ipairs(activeIchorNametags) do
-            if tag and tag.Parent then tag.Enabled = not ichorDisableNametags end
-        end
-    end
-})
-
-EspTab:CreateSection("Elevators ESP")
-
-local elevatorEspEnabled = false
-local elevatorDisableNametags = false
-local activeElevatorNametags = {}
-local elevatorConnection = nil
-
-local function applyElevator(obj)
-    if obj:FindFirstChild("ElevatorESP") or obj.Name ~= "ElevatorDoor" then return end
-
-    local folder = Instance.new("Folder")
-    folder.Name = "ElevatorESP"
-    folder.Parent = obj
-
-    local highlight = Instance.new("Highlight", folder)
-    highlight.Adornee = obj
-    highlight.FillColor = Color3.fromRGB(0, 0, 0)
-    highlight.FillTransparency = 0.5
-    highlight.OutlineColor = Color3.fromRGB(0, 0, 0)
-    highlight.OutlineTransparency = 0
-
-    local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)) or (obj:IsA("BasePart") and obj)
-    if part then
-        local bb = Instance.new("BillboardGui", folder)
-        bb.Name = "Nametag"
-        bb.Adornee = part
-        bb.Size = UDim2.new(0, 200, 0, 50)
-        bb.StudsOffset = Vector3.new(0, 2.5, 0)
-        bb.AlwaysOnTop = true
-        bb.Enabled = not elevatorDisableNametags
-
-        table.insert(activeElevatorNametags, bb)
-
-        local txt = Instance.new("TextLabel", bb)
-        txt.Size = UDim2.new(1, 0, 1, 0)
-        txt.BackgroundTransparency = 1
-        txt.Text = "Elevator"
-        txt.TextColor3 = Color3.fromRGB(255, 255, 255)
-        txt.TextSize = 12
-        txt.Font = Enum.Font.FredokaOne
-        txt.TextStrokeTransparency = 0
-    end
-end
-
-EspTab:CreateToggle({
-    Name = "Elevator Esp",
-    CurrentValue = false,
-    Flag = "ElevatorEspToggle",
-    Callback = function(v)
-        elevatorEspEnabled = v
-        if elevatorEspEnabled then
-            for _, obj in ipairs(workspace:GetDescendants()) do applyElevator(obj) end
-
-            if elevatorConnection then elevatorConnection:Disconnect() end
-            elevatorConnection = workspace.DescendantAdded:Connect(function(obj)
-                if elevatorEspEnabled then
-                    task.wait(0.1)
-                    applyElevator(obj)
-                end
-            end)
-        else
-            if elevatorConnection then
-                elevatorConnection:Disconnect()
-                elevatorConnection = nil
-            end
-            activeElevatorNametags = {}
-            for _, obj in ipairs(workspace:GetDescendants()) do
-                local custom = obj:FindFirstChild("ElevatorESP")
-                if custom then custom:Destroy() end
-            end
-        end
-    end
-})
-
-EspTab:CreateToggle({
-    Name = "Disable Elevator Esp Nametags",
-    CurrentValue = false,
-    Flag = "ElevatorDisableNametagsToggle",
-    Callback = function(v)
-        elevatorDisableNametags = v
-        for _, tag in ipairs(activeElevatorNametags) do
-            if tag and tag.Parent then tag.Enabled = not elevatorDisableNametags end
-        end
-    end
-})
-
-local fakeElevatorEspEnabled = false
-local fakeElevatorDisableNametags = false
-local activeFakeElevatorNametags = {}
-local fakeElevatorConnection = nil
-
-local function applyFakeElevator(obj)
-    if obj:FindFirstChild("FakeElevatorESP") then return end
-    if obj.Name:lower():find("fakeelevator") or obj.Name:lower():find("fake_elevator") then
-        local folder = Instance.new("Folder")
-        folder.Name = "FakeElevatorESP"
-        folder.Parent = obj
-
-        local highlight = Instance.new("Highlight", folder)
-        highlight.Adornee = obj
-        highlight.FillColor = Color3.fromRGB(255, 255, 150)
-        highlight.FillTransparency = 0.7
-        highlight.OutlineColor = Color3.fromRGB(255, 255, 150)
-        highlight.OutlineTransparency = 0.5
-
-        local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)) or (obj:IsA("BasePart") and obj)
-        if part then
-            local bb = Instance.new("BillboardGui", folder)
-            bb.Name = "Nametag"
-            bb.Adornee = part
-            bb.Size = UDim2.new(0, 200, 0, 50)
-            bb.StudsOffset = Vector3.new(0, 2.5, 0)
-            bb.AlwaysOnTop = true
-            bb.Enabled = not fakeElevatorDisableNametags
-
-            table.insert(activeFakeElevatorNametags, bb)
-
-            local txt = Instance.new("TextLabel", bb)
-            txt.Size = UDim2.new(1, 0, 1, 0)
-            txt.BackgroundTransparency = 1
-            txt.Text = "Fake Elevator"
-            txt.TextColor3 = Color3.fromRGB(255, 255, 150)
-            txt.TextSize = 12
-            txt.Font = Enum.Font.FredokaOne
-            txt.TextStrokeTransparency = 0
-        end
-    end
-end
-
-EspTab:CreateToggle({
-    Name = "Fake Elevator Esp",
-    CurrentValue = false,
-    Flag = "FakeElevatorEspToggle",
-    Callback = function(v)
-        fakeElevatorEspEnabled = v
-        if fakeElevatorEspEnabled then
-            for _, obj in ipairs(workspace:GetDescendants()) do applyFakeElevator(obj) end
-
-            if fakeElevatorConnection then fakeElevatorConnection:Disconnect() end
-            fakeElevatorConnection = workspace.DescendantAdded:Connect(function(obj)
-                if fakeElevatorEspEnabled then
-                    task.wait(0.1)
-                    applyFakeElevator(obj)
-                end
-            end)
-        else
-            if fakeElevatorConnection then
-                fakeElevatorConnection:Disconnect()
-                fakeElevatorConnection = nil
-            end
-            activeFakeElevatorNametags = {}
-            for _, obj in ipairs(workspace:GetDescendants()) do
-                local custom = obj:FindFirstChild("FakeElevatorESP")
-                if custom then custom:Destroy() end
-            end
-        end
-    end
-})
-
-EspTab:CreateToggle({
-    Name = "Disable Fake Elevator Nametags",
-    CurrentValue = false,
-    Flag = "FakeElevatorDisableNametagsToggle",
-    Callback = function(v)
-        fakeElevatorDisableNametags = v
-        for _, tag in ipairs(activeFakeElevatorNametags) do
-            if tag and tag.Parent then tag.Enabled = not fakeElevatorDisableNametags end
-        end
-    end
-})
-
--- ESP extras taken from the Neon Hub script: reanimators, star pillows, ichorlings, ichor flasks
--- and the Twisted Alert
 EspTab:CreateSection("More ESP")
 
 local function createKeywordEsp(toggleName, flag, color, matches)
@@ -3174,11 +2935,6 @@ local function createKeywordEsp(toggleName, flag, color, matches)
     })
 end
 
-createKeywordEsp("Reanimator ESP", "ReanimatorEspToggle", Color3.fromRGB(80, 255, 160), function(o)
-    local n = o.Name:lower()
-    return n:find("revive", 1, true) ~= nil or n:find("reanimator", 1, true) ~= nil
-end)
-
 createKeywordEsp("Star Pillow ESP", "StarPillowEspToggle", Color3.fromRGB(255, 230, 90), function(o)
     local n = o.Name:lower()
     return n:find("starpillow", 1, true) ~= nil or n:find("star pillow", 1, true) ~= nil
@@ -3191,80 +2947,6 @@ end)
 createKeywordEsp("Ichor Flask ESP", "IchorFlaskEspToggle", Color3.fromRGB(255, 120, 60), function(o)
     return o.Name:lower() == "beaker_ichorlow"
 end)
-
--- Twisted Alert: a red banner and an air horn when a Twisted is within 35 studs
-local TWISTED_ALERT_DISTANCE, TWISTED_ALERT_COOLDOWN = 35, 4
-local twistedAlertEnabled, twistedAlertActive, twistedAlertLast = false, false, 0
-local twistedAlertLabel, twistedAlertSound = nil, nil
-
-local function ensureTwistedAlert()
-    if not twistedAlertLabel or not twistedAlertLabel.Parent then
-        local label = Instance.new("TextLabel")
-        label.Name = "TwistedAlertBanner"
-        label.AnchorPoint = Vector2.new(0.5, 0)
-        label.Position = UDim2.new(0.5, 0, 0, 15)
-        label.Size = UDim2.fromOffset(420, 45)
-        label.BackgroundColor3 = Color3.fromRGB(90, 0, 0)
-        label.BackgroundTransparency = 0.15
-        label.Text = "A TWISTED IS CHASING YOU!!!"
-        label.TextColor3 = Color3.fromRGB(255, 45, 45)
-        label.Font = Enum.Font.GothamBlack
-        label.TextSize = 19
-        label.Visible = false
-        label.ZIndex = 300
-        label.Parent = Window.gui
-        Instance.new("UICorner", label).CornerRadius = UDim.new(0, 8)
-        local stroke = Instance.new("UIStroke", label)
-        stroke.Color = Color3.fromRGB(255, 35, 35)
-        stroke.Thickness = 2
-        twistedAlertLabel = label
-    end
-    if not twistedAlertSound or not twistedAlertSound.Parent then
-        local sound = Instance.new("Sound")
-        sound.Name = "AstroTwistedAlertHorn"
-        sound.SoundId = "rbxassetid://9120386436"
-        sound.Volume = 2
-        sound.Parent = game:GetService("SoundService")
-        twistedAlertSound = sound
-    end
-end
-
-EspTab:CreateToggle({
-    Name = "Twisted Alert",
-    CurrentValue = false,
-    Flag = "TwistedAlertToggle",
-    Callback = function(v)
-        twistedAlertEnabled = v
-        if v then
-            ensureTwistedAlert()
-            task.spawn(function()
-                while twistedAlertEnabled do
-                    local char = LocalPlayer.Character
-                    local root = char and char:FindFirstChild("HumanoidRootPart")
-                    if root and not twistedAlertActive and tick() - twistedAlertLast >= TWISTED_ALERT_COOLDOWN then
-                        if isTwistedNearby(root.Position, TWISTED_ALERT_DISTANCE) then
-                            twistedAlertActive = true
-                            twistedAlertLast = tick()
-                            twistedAlertLabel.Visible = true
-                            twistedAlertSound:Stop()
-                            twistedAlertSound.TimePosition = 0
-                            twistedAlertSound:Play()
-                            task.delay(3, function()
-                                twistedAlertLabel.Visible = false
-                                twistedAlertActive = false
-                            end)
-                        end
-                    end
-                    task.wait(0.5)
-                end
-            end)
-        else
-            if twistedAlertLabel then twistedAlertLabel.Visible = false end
-            if twistedAlertSound then twistedAlertSound:Stop() end
-            twistedAlertActive = false
-        end
-    end
-})
 
 EspTab:CreateSection("Esp Blacklist")
 
@@ -3903,12 +3585,18 @@ MachineTab:CreateToggle({
     end
 })
 
-MachineTab:CreateButton({
+local arcadeLoaded = false
+MachineTab:CreateToggle({
     Name = "Auto Arcade Machine",
-    Callback = function()
-        pcall(function()
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/christmas-cookie/extensions/refs/heads/main/arcademachine", true))()
-        end)
+    CurrentValue = false,
+    Flag = "AutoArcadeMachineToggle",
+    Callback = function(v)
+        if v and not arcadeLoaded then
+            arcadeLoaded = true
+            pcall(function()
+                loadstring(game:HttpGet("https://raw.githubusercontent.com/christmas-cookie/extensions/refs/heads/main/arcademachine", true))()
+            end)
+        end
     end,
 })
 
@@ -4151,4 +3839,164 @@ SettingsTab:CreateButton({
     Callback = function()
         Window:Center()
     end,
+})
+
+SettingsTab:CreateSection("Configurations")
+
+local HttpService = game:GetService("HttpService")
+local CFG_DIR = "astro_hates_you_configs"
+local CFG_SKIP = {
+    DeviceMode = true, ButtonPosition = true, ButtonSize = true, GuiWidth = true, GuiHeight = true,
+    TabBannerToggle = true, ItemEspBlacklistDropdown = true, PlayerEspBlacklistDropdown = true,
+    ConfigNameInput = true, ConfigListDropdown = true,
+}
+local cfgName = ""
+local cfgSelected = nil
+local cfgDropdown
+
+local function cfgNotify(msg)
+    pcall(function()
+        game:GetService("StarterGui"):SetCore("SendNotification", {Title = "astro", Text = msg, Duration = 3})
+    end)
+end
+
+local function cfgList()
+    local out = {}
+    pcall(function()
+        if makefolder and isfolder and not isfolder(CFG_DIR) then makefolder(CFG_DIR) end
+        if listfiles then
+            for _, path in ipairs(listfiles(CFG_DIR)) do
+                local name = tostring(path):match("([^/\\]+)%.json$")
+                if name then table.insert(out, name) end
+            end
+        end
+    end)
+    table.sort(out)
+    return out
+end
+
+local function cfgRefresh()
+    if cfgDropdown then
+        local list = cfgList()
+        cfgDropdown.Refresh(#list > 0 and list or {"(none)"})
+    end
+end
+
+local function cfgCollect()
+    local data = {}
+    for flag, obj in pairs(Window.flags) do
+        if not CFG_SKIP[flag] and obj.Get then
+            local ok, v = pcall(obj.Get)
+            if ok then
+                if obj.GetEnabled then
+                    local _, e = pcall(obj.GetEnabled)
+                    data[flag] = {t = "slider", v = v, e = e and true or false}
+                elseif type(v) == "boolean" then
+                    data[flag] = {t = "toggle", v = v}
+                elseif type(v) == "number" then
+                    data[flag] = {t = "slider", v = v}
+                elseif type(v) == "string" then
+                    data[flag] = {t = "drop", v = v}
+                elseif type(v) == "table" then
+                    local arr = {}
+                    for k, val in pairs(v) do
+                        if type(k) == "number" then table.insert(arr, val) elseif val then table.insert(arr, k) end
+                    end
+                    data[flag] = {t = "multi", v = arr}
+                end
+            end
+        end
+    end
+    return data
+end
+
+local function cfgApply(data)
+    for flag, entry in pairs(data) do
+        local obj = Window.flags[flag]
+        if obj and not CFG_SKIP[flag] and type(entry) == "table" then
+            pcall(function()
+                if entry.t == "toggle" then
+                    obj.Set(entry.v, true)
+                elseif entry.t == "slider" then
+                    obj.Set(entry.v, true)
+                    if entry.e ~= nil and obj.SetEnabled then obj.SetEnabled(entry.e, true) end
+                elseif entry.t == "drop" or entry.t == "multi" then
+                    obj.Set(entry.v, true)
+                end
+            end)
+        end
+    end
+end
+
+SettingsTab:CreateInput({
+    Name = "Config Name",
+    Placeholder = "my config",
+    Flag = "ConfigNameInput",
+    Callback = function(text) cfgName = (text or ""):gsub("[^%w _%-]", ""):gsub("^%s+", ""):gsub("%s+$", "") end,
+})
+
+cfgDropdown = SettingsTab:CreateDropdown({
+    Name = "Saved Configs",
+    Options = (function() local l = cfgList() return #l > 0 and l or {"(none)"} end)(),
+    CurrentOption = {"(none)"},
+    Flag = "ConfigListDropdown",
+    Callback = function(opt) cfgSelected = (opt ~= "(none)") and opt or nil end,
+})
+
+SettingsTab:CreateButton({
+    Name = "Create / Save Config",
+    Callback = function()
+        local name = cfgName ~= "" and cfgName or cfgSelected
+        if not name or name == "" then cfgNotify("Type a config name first") return end
+        if not (writefile and HttpService) then cfgNotify("Your executor can't save files") return end
+        local ok = pcall(function()
+            if makefolder and isfolder and not isfolder(CFG_DIR) then makefolder(CFG_DIR) end
+            writefile(CFG_DIR .. "/" .. name .. ".json", HttpService:JSONEncode(cfgCollect()))
+        end)
+        cfgNotify(ok and ("Saved: " .. name) or "Save failed")
+        cfgRefresh()
+    end,
+})
+
+SettingsTab:CreateButton({
+    Name = "Load Selected Config",
+    Callback = function()
+        if not cfgSelected then cfgNotify("Select a config first") return end
+        local ok, data = pcall(function()
+            return HttpService:JSONDecode(readfile(CFG_DIR .. "/" .. cfgSelected .. ".json"))
+        end)
+        if ok and type(data) == "table" then
+            cfgApply(data)
+            cfgNotify("Loaded: " .. cfgSelected)
+        else
+            cfgNotify("Load failed")
+        end
+    end,
+})
+
+SettingsTab:CreateButton({
+    Name = "Overwrite Selected Config",
+    Callback = function()
+        if not cfgSelected then cfgNotify("Select a config first") return end
+        local ok = pcall(function()
+            writefile(CFG_DIR .. "/" .. cfgSelected .. ".json", HttpService:JSONEncode(cfgCollect()))
+        end)
+        cfgNotify(ok and ("Overwrote: " .. cfgSelected) or "Save failed")
+    end,
+})
+
+SettingsTab:CreateButton({
+    Name = "Delete Selected Config",
+    Callback = function()
+        if not cfgSelected then cfgNotify("Select a config first") return end
+        pcall(function() if delfile then delfile(CFG_DIR .. "/" .. cfgSelected .. ".json") end end)
+        cfgNotify("Deleted: " .. cfgSelected)
+        cfgSelected = nil
+        cfgRefresh()
+    end,
+})
+
+SettingsTab:CreateButton({
+    Name = "Refresh Config List",
+    Callback = cfgRefresh,
 })
